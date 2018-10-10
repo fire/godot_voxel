@@ -2,11 +2,10 @@
 #define VOXEL_MAP_H
 
 #include "voxel_buffer.h"
+#include "voxel_block.h"
 
 #include <core/hash_map.h>
 #include <scene/main/node.h>
-
-class VoxelBlock;
 
 // Infinite voxel storage by means of octants like Gridmap
 class VoxelMap : public Reference {
