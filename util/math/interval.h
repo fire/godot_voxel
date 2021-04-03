@@ -41,7 +41,7 @@ struct Interval {
 	}
 
 	inline bool is_single_value() const {
-		return min == max;
+		return Math::is_equal_approx(min, max);
 	}
 
 	inline void add_point(float x) {
