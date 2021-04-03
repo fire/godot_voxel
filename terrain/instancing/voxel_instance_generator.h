@@ -2,10 +2,10 @@
 #define VOXEL_INSTANCE_GENERATOR_H
 
 //#include "../../storage/voxel_buffer.h"
-#include "../../util/math/vector3i.h"
+#include "core/math/vector3i.h"
 #include "../../util/noise/fast_noise_lite.h"
 
-#include <core/resource.h>
+#include "core/io/resource.h"
 #include <limits>
 #include <vector>
 

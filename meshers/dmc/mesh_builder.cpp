@@ -32,9 +32,9 @@ Array MeshBuilder::commit(bool wireframe) {
 		_indices = wireframe_indices;
 	}
 
-	PoolVector3Array positions;
-	PoolVector3Array normals;
-	PoolIntArray indices;
+	Vector<Vector3> positions;
+	Vector<Vector3> normals;
+	Vector<int32_t> indices;
 
 	raw_copy_to(positions, _positions);
 	raw_copy_to(normals, _normals);

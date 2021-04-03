@@ -6,8 +6,8 @@
 #include "voxel_map.h"
 #include "voxel_node.h"
 
-#include <core/set.h>
-#include <scene/3d/spatial.h>
+#include "core/templates/set.h"
+#include <scene/3d/node_3d.h>
 
 #ifdef TOOLS_ENABLED
 #include "../editor/voxel_debug.h"

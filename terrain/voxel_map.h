@@ -4,7 +4,7 @@
 #include "../util/fixed_array.h"
 #include "voxel_block.h"
 
-#include <core/hash_map.h>
+#include <core/templates/hash_map.h>
 #include <scene/main/node.h>
 
 // Infinite voxel storage by means of octants like Gridmap, within a constant LOD.
@@ -15,7 +15,7 @@ public:
 	// Converts voxel coodinates into block coordinates.
 	// Don't use division because it introduces an offset in negative coordinates.
 	static _FORCE_INLINE_ Vector3i voxel_to_block_b(Vector3i pos, int block_size_pow2) {
-		return pos >> block_size_pow2;
+		return  Vector3i(pos.x >> block_size_pow2, pos.y >> block_size_pow2, pos.z >> block_size_pow2);;
 	}
 
 	_FORCE_INLINE_ Vector3i voxel_to_block(Vector3i pos) const {
@@ -73,9 +73,8 @@ public:
 		if (_last_accessed_block && _last_accessed_block->position == bpos) {
 			_last_accessed_block = nullptr;
 		}
-		unsigned int *iptr = _blocks_map.getptr(bpos);
-		if (iptr != nullptr) {
-			const unsigned int i = *iptr;
+		if (_blocks_map.has(bpos)) {
+			const unsigned int i = _blocks_map[bpos];
 #ifdef DEBUG_ENABLED
 			CRASH_COND(i >= _blocks.size());
 #endif
@@ -129,7 +128,7 @@ private:
 
 	// Blocks stored with a spatial hash in all 3D directions.
 	// RELATIONSHIP = 2 because it delivers better performance with this kind of key and hash (less collisions).
-	HashMap<Vector3i, unsigned int, Vector3iHasher, HashMapComparatorDefault<Vector3i>, 3, 2> _blocks_map;
+	Map<Vector3i, unsigned int> _blocks_map;
 	std::vector<VoxelBlock *> _blocks;
 
 	// Voxel access will most frequently be in contiguous areas, so the same blocks are accessed.

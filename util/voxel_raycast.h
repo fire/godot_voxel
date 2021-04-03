@@ -1,4 +1,4 @@
-#include "../util/math/vector3i.h"
+#include "core/math/vector3i.h"
 #include "../util/profiling.h"
 #include <core/math/vector3.h>
 

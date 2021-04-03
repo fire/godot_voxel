@@ -6,11 +6,11 @@
 #include "../util/profiling.h"
 
 Vector3 VoxelRaycastResult::_b_get_position() const {
-	return position.to_vec3();
+	return position;
 }
 
 Vector3 VoxelRaycastResult::_b_get_previous_position() const {
-	return previous_position.to_vec3();
+	return previous_position;
 }
 
 float VoxelRaycastResult::_b_get_distance() const {
@@ -24,7 +24,7 @@ void VoxelRaycastResult::_bind_methods() {
 
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "position"), "", "get_position");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "previous_position"), "", "get_previous_position");
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "distance"), "", "get_distance");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "distance"), "", "get_distance");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -89,7 +89,7 @@ float VoxelTool::get_voxel_f(Vector3i pos) const {
 }
 
 void VoxelTool::set_voxel(Vector3i pos, uint64_t v) {
-	Rect3i box(pos, Vector3i(1));
+	Rect3i box(pos, Vector3i(1, 1, 1));
 	if (!is_area_editable(box)) {
 		PRINT_VERBOSE("Area not editable");
 		return;
@@ -99,7 +99,7 @@ void VoxelTool::set_voxel(Vector3i pos, uint64_t v) {
 }
 
 void VoxelTool::set_voxel_f(Vector3i pos, float v) {
-	Rect3i box(pos, Vector3i(1));
+	Rect3i box(pos, Vector3i(1, 1, 1));
 	if (!is_area_editable(box)) {
 		PRINT_VERBOSE("Area not editable");
 		return;
@@ -109,7 +109,7 @@ void VoxelTool::set_voxel_f(Vector3i pos, float v) {
 }
 
 void VoxelTool::do_point(Vector3i pos) {
-	Rect3i box(pos, Vector3i(1));
+	Rect3i box(pos, Vector3i(1, 1, 1));
 	if (!is_area_editable(box)) {
 		return;
 	}
@@ -179,7 +179,7 @@ inline float sdf_blend(float src_value, float dst_value, VoxelTool::Mode mode) {
 void VoxelTool::do_sphere(Vector3 center, float radius) {
 	VOXEL_PROFILE_SCOPE();
 
-	const Rect3i box(Vector3i(center) - Vector3i(Math::floor(radius)), Vector3i(Math::ceil(radius) * 2));
+	const Rect3i box(center - Vector3i(Math::floor(radius), Math::floor(radius), Math::floor(radius)), Vector3i(Math::ceil(radius) * 2, Math::ceil(radius) * 2, Math::ceil(radius) * 2));
 
 	if (!is_area_editable(box)) {
 		PRINT_VERBOSE("Area not editable");
@@ -188,7 +188,7 @@ void VoxelTool::do_sphere(Vector3 center, float radius) {
 
 	if (_channel == VoxelBuffer::CHANNEL_SDF) {
 		box.for_each_cell([this, center, radius](Vector3i pos) {
-			float d = _sdf_scale * (pos.to_vec3().distance_to(center) - radius);
+			float d = _sdf_scale * (Vector3(pos).distance_to(center) - radius);
 			_set_voxel_f(pos, sdf_blend(d, get_voxel_f(pos), _mode));
 		});
 
@@ -196,7 +196,7 @@ void VoxelTool::do_sphere(Vector3 center, float radius) {
 		int value = _mode == MODE_REMOVE ? _eraser_value : _value;
 
 		box.for_each_cell([this, center, radius, value](Vector3i pos) {
-			float d = pos.to_vec3().distance_to(center);
+			float d = Vector3(pos).distance_to(center);
 			if (d <= radius) {
 				_set_voxel(pos, value);
 			}
@@ -208,7 +208,7 @@ void VoxelTool::do_sphere(Vector3 center, float radius) {
 
 void VoxelTool::do_box(Vector3i begin, Vector3i end) {
 	VOXEL_PROFILE_SCOPE();
-	Vector3i::sort_min_max(begin, end);
+	begin.sort_min_max(end);
 	Rect3i box = Rect3i::from_min_max(begin, end + Vector3i(1, 1, 1));
 
 	if (!is_area_editable(box)) {

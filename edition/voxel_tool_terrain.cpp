@@ -2,7 +2,6 @@
 #include "../terrain/voxel_map.h"
 #include "../terrain/voxel_terrain.h"
 #include "../util/voxel_raycast.h"
-#include <core/func_ref.h>
 
 VoxelToolTerrain::VoxelToolTerrain() {
 }
@@ -148,12 +147,11 @@ Variant VoxelToolTerrain::get_voxel_metadata(Vector3i pos) {
 
 // Executes a function on random voxels in the provided area, using the type channel.
 // This allows to implement slow "natural" cellular automata behavior, as can be seen in Minecraft.
-void VoxelToolTerrain::run_blocky_random_tick(AABB voxel_area, int voxel_count, Ref<FuncRef> callback, int batch_count) const {
+void VoxelToolTerrain::run_blocky_random_tick(AABB voxel_area, int voxel_count, Callable callback, int batch_count) const {
 	VOXEL_PROFILE_SCOPE();
 
 	ERR_FAIL_COND(_terrain == nullptr);
 	ERR_FAIL_COND(_terrain->get_voxel_library().is_null());
-	ERR_FAIL_COND(callback.is_null());
 	ERR_FAIL_COND(batch_count <= 0);
 	ERR_FAIL_COND(voxel_count < 0);
 
@@ -232,16 +230,17 @@ void VoxelToolTerrain::run_blocky_random_tick(AABB voxel_area, int voxel_count, 
 					const Voxel &vt = lib.get_voxel_const(pick.value);
 
 					if (vt.is_random_tickable()) {
-						const Variant vpos = (pick.rpos + block_origin).to_vec3();
+						const Variant vpos = Vector3(pick.rpos + block_origin);
 						const Variant vv = pick.value;
 						const Variant *args[2];
 						args[0] = &vpos;
 						args[1] = &vv;
-						Variant::CallError error;
-						callback->call_func(args, 2, error);
+						Callable::CallError error;
+				        Variant result;
+						callback.call(args, 2, result, error);
 						// TODO I would really like to know what's the correct way to report such errors...
 						// Examples I found in the engine are inconsistent
-						ERR_FAIL_COND(error.error != Variant::CallError::CALL_OK);
+						ERR_FAIL_COND(error.error != Callable::CallError::CALL_OK);
 						// Return if it fails, we don't want an error spam
 					}
 				}

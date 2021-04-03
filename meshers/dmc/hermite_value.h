@@ -68,8 +68,8 @@ inline HermiteValue get_interpolated_hermite_value(const VoxelBuffer &voxels, Ve
 	Vector3 rpos = pos - Vector3(x0, y0, z0);
 
 	HermiteValue v;
-	v.sdf = ::interpolate(v0.sdf, v1.sdf, v2.sdf, v3.sdf, v4.sdf, v5.sdf, v6.sdf, v7.sdf, rpos);
-	v.gradient = ::interpolate(v0.gradient, v1.gradient, v2.gradient, v3.gradient, v4.gradient, v5.gradient, v6.gradient, v7.gradient, rpos);
+	v.sdf = rpos.interpolate(v0.sdf, v1.sdf, v2.sdf, v3.sdf, v4.sdf, v5.sdf, v6.sdf, v7.sdf);
+	v.gradient = rpos.interpolate(v0.gradient, v1.gradient, v2.gradient, v3.gradient, v4.gradient, v5.gradient, v6.gradient, v7.gradient);
 
 	return v;
 }

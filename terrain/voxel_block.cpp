@@ -3,22 +3,22 @@
 #include "../util/macros.h"
 #include "../util/profiling.h"
 
-#include <scene/3d/spatial.h>
-#include <scene/resources/concave_polygon_shape.h>
+#include <scene/3d/node_3d.h>
+#include <scene/resources/concave_polygon_shape_3d.h>
 
 // Faster version of Mesh::create_trimesh_shape()
 // See https://github.com/Zylann/godot_voxel/issues/54
 //
-static Ref<ConcavePolygonShape> create_concave_polygon_shape(Vector<Array> surfaces) {
+static Ref<ConcavePolygonShape3D> create_concave_polygon_shape(Vector<Array> surfaces) {
 	VOXEL_PROFILE_SCOPE();
 
-	PoolVector<Vector3> face_points;
+	Vector<Vector3> face_points;
 	int face_points_size = 0;
 
 	//find the correct size for face_points
 	for (int i = 0; i < surfaces.size(); i++) {
 		const Array &surface_arrays = surfaces[i];
-		PoolVector<int> indices = surface_arrays[Mesh::ARRAY_INDEX];
+		Vector<int> indices = surface_arrays[Mesh::ARRAY_INDEX];
 
 		face_points_size += indices.size();
 	}
@@ -29,19 +29,19 @@ static Ref<ConcavePolygonShape> create_concave_polygon_shape(Vector<Array> surfa
 	for (int i = 0; i < surfaces.size(); i++) {
 		const Array &surface_arrays = surfaces[i];
 
-		PoolVector<Vector3> positions = surface_arrays[Mesh::ARRAY_VERTEX];
-		PoolVector<int> indices = surface_arrays[Mesh::ARRAY_INDEX];
+		Vector<Vector3> positions = surface_arrays[Mesh::ARRAY_VERTEX];
+		Vector<int> indices = surface_arrays[Mesh::ARRAY_INDEX];
 
-		ERR_FAIL_COND_V(positions.size() < 3, Ref<ConcavePolygonShape>());
-		ERR_FAIL_COND_V(indices.size() < 3, Ref<ConcavePolygonShape>());
-		ERR_FAIL_COND_V(indices.size() % 3 != 0, Ref<ConcavePolygonShape>());
+		ERR_FAIL_COND_V(positions.size() < 3, Ref<ConcavePolygonShape3D>());
+		ERR_FAIL_COND_V(indices.size() < 3, Ref<ConcavePolygonShape3D>());
+		ERR_FAIL_COND_V(indices.size() % 3 != 0, Ref<ConcavePolygonShape3D>());
 
 		int face_points_count = face_points_offset + indices.size();
 
 		{
-			PoolVector<Vector3>::Write w = face_points.write();
-			PoolVector<int>::Read index_r = indices.read();
-			PoolVector<Vector3>::Read position_r = positions.read();
+			Vector3 *w = face_points.ptrw();
+			const int *index_r = indices.ptr();
+			const Vector3 *position_r = positions.ptr();
 
 			for (int p = face_points_offset; p < face_points_count; ++p) {
 				w[p] = position_r[index_r[p - face_points_offset]];
@@ -51,7 +51,7 @@ static Ref<ConcavePolygonShape> create_concave_polygon_shape(Vector<Array> surfa
 		face_points_offset += indices.size();
 	}
 
-	Ref<ConcavePolygonShape> shape = memnew(ConcavePolygonShape);
+	Ref<ConcavePolygonShape3D> shape = memnew(ConcavePolygonShape3D);
 	shape->set_faces(face_points);
 	return shape;
 }
@@ -92,7 +92,7 @@ VoxelBlock::VoxelBlock() {
 VoxelBlock::~VoxelBlock() {
 }
 
-void VoxelBlock::set_world(Ref<World> p_world) {
+void VoxelBlock::set_world(Ref<World3D> p_world) {
 	if (_world != p_world) {
 		_world = p_world;
 
@@ -229,7 +229,7 @@ void VoxelBlock::set_shader_material(Ref<ShaderMaterial> material) {
 	}
 
 	if (_shader_material.is_valid()) {
-		const Transform local_transform(Basis(), _position_in_voxels.to_vec3());
+		const Transform local_transform(Basis(), _position_in_voxels);
 		_shader_material->set_shader_param(VoxelStringNames::get_singleton()->u_block_local_transform, local_transform);
 	}
 }
@@ -290,7 +290,7 @@ void VoxelBlock::set_parent_transform(const Transform &parent_transform) {
 	VOXEL_PROFILE_SCOPE();
 
 	if (_mesh_instance.is_valid() || _static_body.is_valid()) {
-		const Transform local_transform(Basis(), _position_in_voxels.to_vec3());
+		const Transform local_transform(Basis(), _position_in_voxels);
 		const Transform world_transform = parent_transform * local_transform;
 
 		if (_mesh_instance.is_valid()) {
@@ -321,20 +321,20 @@ bool VoxelBlock::is_modified() const {
 void VoxelBlock::set_modified(bool modified) {
 #ifdef TOOLS_ENABLED
 	if (_modified == false && modified) {
-		PRINT_VERBOSE(String("Marking block {0} as modified").format(varray(position.to_vec3())));
+		PRINT_VERBOSE(String("Marking block {0} as modified").format(varray(Vector3(position))));
 	}
 #endif
 	_modified = modified;
 }
 
-void VoxelBlock::set_collision_mesh(Vector<Array> surface_arrays, bool debug_collision, Spatial *node) {
+void VoxelBlock::set_collision_mesh(Vector<Array> surface_arrays, bool debug_collision, Node3D *node) {
 	if (surface_arrays.size() == 0) {
 		drop_collision();
 		return;
 	}
 
 	ERR_FAIL_COND(node == nullptr);
-	ERR_FAIL_COND_MSG(node->get_world() != _world, "Physics body and attached node must be from the same world");
+	ERR_FAIL_COND_MSG(node->get_world_3d() != _world, "Physics body and attached node must be from the same world");
 
 	if (!_static_body.is_valid()) {
 		_static_body.create();
@@ -346,7 +346,7 @@ void VoxelBlock::set_collision_mesh(Vector<Array> surface_arrays, bool debug_col
 		_static_body.remove_shape(0);
 	}
 
-	Ref<Shape> shape = create_concave_polygon_shape(surface_arrays);
+	Ref<Shape3D> shape = create_concave_polygon_shape(surface_arrays);
 
 	_static_body.add_shape(shape);
 	_static_body.set_debug(debug_collision, *_world);

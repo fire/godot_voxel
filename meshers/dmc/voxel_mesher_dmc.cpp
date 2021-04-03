@@ -51,7 +51,7 @@ bool can_split(Vector3i node_origin, int node_size, const VoxelAccess &voxels, f
 	int channel = VoxelBuffer::CHANNEL_SDF;
 
 	// Don't split if nothing is inside, i.e isolevel distance is greater than the size of the cube we are in
-	Vector3i center_pos = node_origin + Vector3i(node_size / 2);
+	Vector3i center_pos = node_origin + Vector3i(node_size / 2, node_size / 2, node_size / 2);
 	HermiteValue center_value = voxels.get_hermite_value(center_pos.x, center_pos.y, center_pos.z);
 	if (Math::abs(center_value.sdf) > SQRT3 * (float)node_size) {
 		return false;
@@ -130,7 +130,7 @@ bool can_split(Vector3i node_origin, int node_size, const VoxelAccess &voxels, f
 
 		HermiteValue value = get_hermite_value(voxels.buffer, pos.x, pos.y, pos.z);
 
-		float interpolated_value = ::interpolate(v0, v1, v2, v3, v4, v5, v6, v7, positions_ratio[i]);
+		float interpolated_value = positions_ratio[i].interpolate(v0, v1, v2, v3, v4, v5, v6, v7);
 
 		float gradient_magnitude = value.gradient.length();
 		if (gradient_magnitude < FLT_EPSILON) {
@@ -146,7 +146,7 @@ bool can_split(Vector3i node_origin, int node_size, const VoxelAccess &voxels, f
 }
 
 inline Vector3 get_center(const OctreeNode *node) {
-	return node->origin.to_vec3() + 0.5 * Vector3(node->size, node->size, node->size);
+	return Vector3(node->origin) + 0.5 * Vector3(node->size, node->size, node->size);
 }
 
 class OctreeBuilderTopDown {
@@ -288,11 +288,10 @@ void foreach_node(OctreeNode *root, Action_T &a, int depth = 0) {
 	}
 }
 
-inline void scale_positions(PoolVector3Array &positions, float scale) {
-	PoolVector3Array::Write w = positions.write();
+inline void scale_positions(Vector<Vector3> &positions, float scale) {
 	const uint32_t size = positions.size();
 	for (unsigned int i = 0; i < size; ++i) {
-		w[i] *= scale;
+		positions.ptrw()[i] *= scale;
 	}
 }
 
@@ -308,9 +307,9 @@ Array generate_debug_octree_mesh(OctreeNode *root, int scale) {
 	};
 
 	struct Arrays {
-		PoolVector3Array positions;
-		PoolColorArray colors;
-		PoolIntArray indices;
+		Vector<Vector3> positions;
+		Vector<Color> colors;
+		Vector<int32_t> indices;
 	};
 
 	struct AddCube {
@@ -320,7 +319,7 @@ Array generate_debug_octree_mesh(OctreeNode *root, int scale) {
 		void operator()(OctreeNode *node, int depth) {
 
 			float shrink = depth * 0.005;
-			Vector3 o = node->origin.to_vec3() + Vector3(shrink, shrink, shrink);
+			Vector3 o = Vector3(node->origin) + Vector3(shrink, shrink, shrink);
 			float s = node->size - 2.0 * shrink;
 
 			Color col(1.0, (float)depth / (float)max_depth, 0.0);
@@ -367,8 +366,8 @@ Array generate_debug_octree_mesh(OctreeNode *root, int scale) {
 
 Array generate_debug_dual_grid_mesh(const DualGrid &grid, int scale) {
 
-	PoolVector3Array positions;
-	PoolIntArray indices;
+	Vector<Vector3> positions;
+	PackedInt32Array indices;
 
 	for (unsigned int i = 0; i < grid.cells.size(); ++i) {
 
@@ -429,14 +428,14 @@ inline bool is_border_front(const OctreeNode *node, int root_size) {
 }
 
 inline Vector3 get_center_back(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size * 0.5;
 	p.y += node->size * 0.5;
 	return p;
 }
 
 inline Vector3 get_center_front(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size * 0.5;
 	p.y += node->size * 0.5;
 	p.z += node->size;
@@ -444,14 +443,14 @@ inline Vector3 get_center_front(const OctreeNode *node) {
 }
 
 inline Vector3 get_center_left(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.y += node->size * 0.5;
 	p.z += node->size * 0.5;
 	return p;
 }
 
 inline Vector3 get_center_right(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size;
 	p.y += node->size * 0.5;
 	p.z += node->size * 0.5;
@@ -459,7 +458,7 @@ inline Vector3 get_center_right(const OctreeNode *node) {
 }
 
 inline Vector3 get_center_top(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size * 0.5;
 	p.y += node->size;
 	p.z += node->size * 0.5;
@@ -467,27 +466,27 @@ inline Vector3 get_center_top(const OctreeNode *node) {
 }
 
 inline Vector3 get_center_bottom(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size * 0.5;
 	p.z += node->size * 0.5;
 	return p;
 }
 
 inline Vector3 get_center_back_top(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size * 0.5;
 	p.y += node->size;
 	return p;
 }
 
 inline Vector3 get_center_back_bottom(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size * 0.5;
 	return p;
 }
 
 inline Vector3 get_center_front_top(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size * 0.5;
 	p.y += node->size;
 	p.z += node->size;
@@ -495,27 +494,27 @@ inline Vector3 get_center_front_top(const OctreeNode *node) {
 }
 
 inline Vector3 get_center_front_bottom(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size * 0.5;
 	p.z += node->size;
 	return p;
 }
 
 inline Vector3 get_center_left_top(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.y += node->size;
 	p.z += node->size * 0.5;
 	return p;
 }
 
 inline Vector3 get_center_left_bottom(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.z += node->size * 0.5;
 	return p;
 }
 
 inline Vector3 get_center_right_top(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size;
 	p.y += node->size;
 	p.z += node->size * 0.5;
@@ -523,34 +522,34 @@ inline Vector3 get_center_right_top(const OctreeNode *node) {
 }
 
 inline Vector3 get_center_right_bottom(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size;
 	p.z += node->size * 0.5;
 	return p;
 }
 
 inline Vector3 get_center_back_left(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.y += node->size * 0.5;
 	return p;
 }
 
 inline Vector3 get_center_front_left(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.y += node->size * 0.5;
 	p.z += node->size;
 	return p;
 }
 
 inline Vector3 get_center_back_right(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size;
 	p.y += node->size * 0.5;
 	return p;
 }
 
 inline Vector3 get_center_front_right(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size;
 	p.y += node->size * 0.5;
 	p.z += node->size;
@@ -558,39 +557,39 @@ inline Vector3 get_center_front_right(const OctreeNode *node) {
 }
 
 inline Vector3 get_corner1(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size;
 	return p;
 }
 
 inline Vector3 get_corner2(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size;
 	p.z += node->size;
 	return p;
 }
 
 inline Vector3 get_corner3(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.z += node->size;
 	return p;
 }
 
 inline Vector3 get_corner4(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.y += node->size;
 	return p;
 }
 
 inline Vector3 get_corner5(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size;
 	p.y += node->size;
 	return p;
 }
 
 inline Vector3 get_corner6(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.x += node->size;
 	p.y += node->size;
 	p.z += node->size;
@@ -598,7 +597,7 @@ inline Vector3 get_corner6(const OctreeNode *node) {
 }
 
 inline Vector3 get_corner7(const OctreeNode *node) {
-	Vector3 p = node->origin.to_vec3();
+	Vector3 p = node->origin;
 	p.y += node->size;
 	p.z += node->size;
 	return p;
@@ -709,7 +708,7 @@ void DualGridGenerator::create_border_cells(
 
 			// Generate back bottom corner cells
 			if (is_border_left(n0)) {
-				add_cell(grid, n0->origin.to_vec3(), get_center_back_bottom(n0), get_center_bottom(n0), get_center_left_bottom(n0),
+				add_cell(grid, Vector3(n0->origin), get_center_back_bottom(n0), get_center_bottom(n0), get_center_left_bottom(n0),
 						get_center_back_left(n0), get_center_back(n0), get_center(n0), get_center_left(n0));
 			}
 
@@ -1382,7 +1381,7 @@ void polygonize_dual_cell(const DualCell &cell, const VoxelAccess &voxels, MeshB
 	polygonize_cell_marching_cubes(corners, values, mesh_builder);
 
 	if (skirts_enabled) {
-		add_marching_squares_skirts(corners, values, mesh_builder, Vector3(), (voxels.buffer.get_size() + voxels.offset).to_vec3());
+		add_marching_squares_skirts(corners, values, mesh_builder, Vector3(), Vector3(voxels.buffer.get_size() + voxels.offset));
 	}
 }
 
@@ -1399,10 +1398,10 @@ void polygonize_volume_directly(const VoxelBuffer &voxels, Vector3i min, Vector3
 	HermiteValue values[8];
 
 	const Vector3i max = min + size;
-	const Vector3 minf = min.to_vec3();
+	const Vector3 minf = min;
 
 	const Vector3 min_vertex_pos = Vector3();
-	const Vector3 max_vertex_pos = (voxels.get_size() - 2 * min).to_vec3();
+	const Vector3 max_vertex_pos = voxels.get_size() - 2 * min;
 
 	for (int z = min.z; z < max.z; ++z) {
 		for (int x = min.x; x < max.x; ++x) {
@@ -1527,12 +1526,12 @@ void VoxelMesherDMC::build(VoxelMesher::Output &output, const VoxelMesher::Input
 	// Maybe a shader with a `light()` function can prevent shadows from being applied to these,
 	// but in longer term, proper seams remain a better solution.
 	// Unfortunately, such seams require the ability to quickly swap index buffers of the mesh using OpenGL/Vulkan,
-	// which is not possible with current Godot's VisualServer without forking the whole lot (dang!),
+	// which is not possible with current Godot's RenderingServer without forking the whole lot (dang!),
 	// and we are forced to at least re-upload the mesh entirely or have 16 versions of it just swapping seams...
 	// So we can't improve this further until Godot's API gives us that possibility, or other approaches like skirts need to be taken.
 
 	// Construct an intermediate to handle padding transparently
-	dmc::VoxelAccess voxels_access(voxels, Vector3i(PADDING));
+	dmc::VoxelAccess voxels_access(voxels, Vector3i(PADDING, PADDING, PADDING));
 
 	Stats stats;
 	real_t time_before = OS::get_singleton()->get_ticks_usec();
@@ -1602,11 +1601,11 @@ void VoxelMesherDMC::build(VoxelMesher::Output &output, const VoxelMesher::Input
 		// This is essentially regular marching cubes.
 		time_before = OS::get_singleton()->get_ticks_usec();
 		dmc::polygonize_volume_directly(
-				voxels, Vector3i(PADDING), Vector3i(chunk_size), cache.mesh_builder, skirts_enabled);
+				voxels, Vector3i(PADDING, PADDING, PADDING), Vector3i(chunk_size, chunk_size, chunk_size), cache.mesh_builder, skirts_enabled);
 		stats.meshing_time = OS::get_singleton()->get_ticks_usec() - time_before;
 	}
 
-	if (surface.empty()) {
+	if (surface.is_empty()) {
 		time_before = OS::get_singleton()->get_ticks_usec();
 		if (input.lod > 0) {
 			cache.mesh_builder.scale(1 << input.lod);
@@ -1671,7 +1670,7 @@ void VoxelMesherDMC::_bind_methods() {
 			PropertyInfo(Variant::INT, "simplify_mode", PROPERTY_HINT_ENUM, "OctreeBottomUp,OctreeTopDown,None"),
 			"set_simplify_mode", "get_simplify_mode");
 
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "geometric_error"), "set_simplify_mode", "get_simplify_mode");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "geometric_error"), "set_simplify_mode", "get_simplify_mode");
 
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "seam_mode", PROPERTY_HINT_ENUM, "None,MarchingSquareSkirts"),
 			"set_seam_mode", "get_seam_mode");

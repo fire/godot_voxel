@@ -41,7 +41,7 @@ struct Interval {
 	}
 
 	inline bool is_single_value() const {
-		return min == max;
+		return Math::is_equal_approx(min, max);
 	}
 
 	inline void add_point(float x) {
@@ -114,7 +114,7 @@ struct Interval {
 	}
 
 	inline Interval operator/(const Interval &other) const {
-		if (other.is_single_value() && other.min == 0.f) {
+		if (other.is_single_value() && Math::is_zero_approx(other.min)) {
 			// Division by zero. In Voxel graph, we return 0.
 			return Interval::from_single_value(0.f);
 		}
@@ -324,8 +324,8 @@ inline Interval round(const Interval &i) {
 	return Interval(Math::floor(i.min + 0.5f), Math::floor(i.max + 0.5f));
 }
 
-inline Interval stepify(const Interval &p_value, const Interval &p_step) {
-	// TODO Division by zero returns 0, which is different from Godot's stepify. May have to change that
+inline Interval snapped(const Interval &p_value, const Interval &p_step) {
+	// TODO Division by zero returns 0, which is different from Godot's snapped. May have to change that
 	return floor(p_value / p_step + Interval::from_single_value(0.5f)) * p_step;
 }
 
@@ -367,8 +367,8 @@ inline Interval squared(const Interval &x) {
 inline Interval polynomial_second_degree(const Interval x, float a, float b, float c) {
 	// a*x*x + b*x + c
 
-	if (a == 0.f) {
-		if (b == 0.f) {
+	if (Math::is_zero_approx(a)) {
+		if (Math::is_zero_approx(b)) {
 			return Interval::from_single_value(c);
 		} else {
 			return b * x + c;
@@ -408,11 +408,11 @@ inline Interval cubed(const Interval &x) {
 }
 
 inline Interval get_length(const Interval &x, const Interval &y) {
-	return sqrt(squared(x) + squared(y));
+	return sqrt(Math::squared(x) + Math::squared(y));
 }
 
 inline Interval get_length(const Interval &x, const Interval &y, const Interval &z) {
-	return sqrt(squared(x) + squared(y) + squared(z));
+	return sqrt(Math::squared(x) + Math::squared(y) + Math::squared(z));
 }
 
 #endif // INTERVAL_H

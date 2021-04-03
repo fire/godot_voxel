@@ -12,8 +12,8 @@
 #include "voxel_map.h"
 
 #include <core/core_string_names.h>
-#include <core/engine.h>
-#include <scene/3d/mesh_instance.h>
+#include <core/config/engine.h>
+#include <scene/3d/mesh_instance_3d.h>
 
 VoxelTerrain::VoxelTerrain() {
 	// Note: don't do anything heavy in the constructor.
@@ -24,7 +24,7 @@ VoxelTerrain::VoxelTerrain() {
 
 	// TODO Should it actually be finite for better discovery?
 	// Infinite by default
-	_bounds_in_voxels = Rect3i::from_center_extents(Vector3i(0), Vector3i(VoxelConstants::MAX_VOLUME_EXTENT));
+	_bounds_in_voxels = Rect3i::from_center_extents(Vector3i(0, 0, 0), Vector3i(VoxelConstants::MAX_VOLUME_EXTENT, VoxelConstants::MAX_VOLUME_EXTENT, VoxelConstants::MAX_VOLUME_EXTENT));
 
 	_volume_id = VoxelServer::get_singleton()->add_volume(&_reception_buffers, VoxelServer::VOLUME_SPARSE_GRID);
 
@@ -85,7 +85,6 @@ void VoxelTerrain::set_stream(Ref<VoxelStream> p_stream) {
 				// Safety check. It's too easy to break threads by making a script reload.
 				// You can turn it back on, but be careful.
 				_run_stream_in_editor = false;
-				_change_notify();
 			}
 		}
 	}
@@ -113,7 +112,6 @@ void VoxelTerrain::set_generator(Ref<VoxelGenerator> p_generator) {
 				// Safety check. It's too easy to break threads by making a script reload.
 				// You can turn it back on, but be careful.
 				_run_stream_in_editor = false;
-				_change_notify();
 			}
 		}
 	}
@@ -274,20 +272,18 @@ void VoxelTerrain::view_block(Vector3i bpos, bool data_flag, bool mesh_flag, boo
 
 	if (block == nullptr) {
 		// The block isn't loaded
-		LoadingBlock *loading_block = _loading_blocks.getptr(bpos);
-
-		if (loading_block == nullptr) {
+		if (!_loading_blocks.has(bpos)) {
 			// First viewer to request it
 			LoadingBlock new_loading_block;
 			new_loading_block.viewers.add(data_flag, mesh_flag, collision_flag);
 
 			// Schedule a loading request
-			_loading_blocks.set(bpos, new_loading_block);
+			_loading_blocks[bpos] = new_loading_block;
 			_blocks_pending_load.push_back(bpos);
 
 		} else {
 			// More viewers
-			loading_block->viewers.add(data_flag, mesh_flag, collision_flag);
+			_loading_blocks[bpos].viewers.add(data_flag, mesh_flag, collision_flag);
 		}
 
 	} else {
@@ -324,16 +320,16 @@ void VoxelTerrain::unview_block(Vector3i bpos, bool data_flag, bool mesh_flag, b
 
 	if (block == nullptr) {
 		// The block isn't loaded
-		LoadingBlock *loading_block = _loading_blocks.getptr(bpos);
-		if (loading_block == nullptr) {
+		if (!_loading_blocks.has(bpos)) {
 			PRINT_VERBOSE("Request to unview a loading block that was never requested");
 			// Not expected, but fine I guess
 			return;
 		}
 
-		loading_block->viewers.remove(data_flag, mesh_flag, collision_flag);
+		LoadingBlock &loading_block = _loading_blocks[bpos];
+		loading_block.viewers.remove(data_flag, mesh_flag, collision_flag);
 
-		if (loading_block->viewers.get(VoxelViewerRefCount::TYPE_DATA) == 0) {
+		if (loading_block.viewers.get(VoxelViewerRefCount::TYPE_DATA) == 0) {
 			// No longer want to load it
 			_loading_blocks.erase(bpos);
 
@@ -385,7 +381,7 @@ struct ScheduleSaveAction {
 	void operator()(VoxelBlock *block) {
 		// TODO Don't ask for save if the stream doesn't support it!
 		if (block->is_modified()) {
-			//print_line(String("Scheduling save for block {0}").format(varray(block->position.to_vec3())));
+			//print_line(String("Scheduling save for block {0}").format(varray(Vector3(block->position))));
 			VoxelTerrain::BlockToSave b;
 			if (with_copy) {
 				RWLockRead lock(block->voxels->get_lock());
@@ -558,7 +554,7 @@ inline int get_border_index(int x, int max) {
 void VoxelTerrain::make_voxel_dirty(Vector3i pos) {
 	if (!_bounds_in_voxels.contains(pos)) {
 		PRINT_VERBOSE(String("Voxel {0} can't be made dirty out of volume bounds {1}")
-							  .format(varray(_bounds_in_voxels.to_string(), pos.to_vec3())));
+							  .format(varray(_bounds_in_voxels.to_string(), Vector3(pos))));
 		return;
 	}
 
@@ -726,8 +722,8 @@ void VoxelTerrain::make_area_dirty(Rect3i box) {
 
 void VoxelTerrain::_notification(int p_what) {
 	struct SetWorldAction {
-		World *world;
-		SetWorldAction(World *w) :
+		World3D *world;
+		SetWorldAction(World3D *w) :
 				world(w) {}
 		void operator()(VoxelBlock *block) {
 			block->set_world(world);
@@ -761,7 +757,7 @@ void VoxelTerrain::_notification(int p_what) {
 			break;
 
 		case NOTIFICATION_ENTER_WORLD: {
-			_map.for_all_blocks(SetWorldAction(*get_world()));
+			_map.for_all_blocks(SetWorldAction(*get_world_3d()));
 		} break;
 
 		case NOTIFICATION_EXIT_WORLD:
@@ -805,7 +801,7 @@ void VoxelTerrain::send_block_data_requests() {
 
 	// Blocks to save
 	for (unsigned int i = 0; i < _blocks_to_save.size(); ++i) {
-		PRINT_VERBOSE(String("Requesting save of block {0}").format(varray(_blocks_to_save[i].position.to_vec3())));
+		PRINT_VERBOSE(String("Requesting save of block {0}").format(varray(Vector3(_blocks_to_save[i].position))));
 		const BlockToSave b = _blocks_to_save[i];
 		// TODO Batch request
 		VoxelServer::get_singleton()->request_voxel_block_save(_volume_id, b.voxels, b.position, 0);
@@ -817,14 +813,14 @@ void VoxelTerrain::send_block_data_requests() {
 }
 
 void VoxelTerrain::emit_block_loaded(const VoxelBlock *block) {
-	const Variant vpos = block->position.to_vec3();
+	const Variant vpos = Vector3(block->position);
 	const Variant vbuffer = block->voxels;
 	const Variant *args[2] = { &vpos, &vbuffer };
 	emit_signal(VoxelStringNames::get_singleton()->block_loaded, args, 2);
 }
 
 void VoxelTerrain::emit_block_unloaded(const VoxelBlock *block) {
-	const Variant vpos = block->position.to_vec3();
+	const Variant vpos = Vector3(block->position);
 	const Variant vbuffer = block->voxels;
 	const Variant *args[2] = { &vpos, &vbuffer };
 	emit_signal(VoxelStringNames::get_singleton()->block_unloaded, args, 2);
@@ -895,7 +891,7 @@ void VoxelTerrain::_process() {
 			const Vector3 local_position = world_to_local_transform.xform(viewer.world_position);
 
 			p.state.view_distance_blocks =
-					min(view_distance_voxels >> get_block_size_pow2(), _max_view_distance_blocks);
+					MIN(view_distance_voxels >> get_block_size_pow2(), _max_view_distance_blocks);
 			p.state.block_position = _map.voxel_to_block(Vector3i(local_position));
 			p.state.requires_collisions = VoxelServer::get_singleton()->is_viewer_requiring_collisions(viewer_id);
 			p.state.requires_meshes = VoxelServer::get_singleton()->is_viewer_requiring_visuals(viewer_id);
@@ -917,10 +913,10 @@ void VoxelTerrain::_process() {
 			const PairedViewer &viewer = _paired_viewers[i];
 
 			const Rect3i new_box = Rect3i::from_center_extents(
-					viewer.state.block_position, Vector3i(viewer.state.view_distance_blocks))
+					viewer.state.block_position, Vector3i(viewer.state.view_distance_blocks, viewer.state.view_distance_blocks, viewer.state.view_distance_blocks))
 										   .clipped(bounds_in_blocks);
 			const Rect3i prev_box = Rect3i::from_center_extents(
-					viewer.prev_state.block_position, Vector3i(viewer.prev_state.view_distance_blocks))
+					viewer.prev_state.block_position, Vector3i(viewer.prev_state.view_distance_blocks, viewer.prev_state.view_distance_blocks, viewer.prev_state.view_distance_blocks))
 											.clipped(prev_bounds_in_blocks);
 
 			if (prev_box != new_box) {
@@ -1008,7 +1004,7 @@ void VoxelTerrain::_process() {
 
 			if (ob.type == VoxelServer::BlockDataOutput::TYPE_SAVE) {
 				if (ob.dropped) {
-					ERR_PRINT(String("Could not save block {0}").format(varray(ob.position.to_vec3())));
+					ERR_PRINT(String("Could not save block {0}").format(varray(Vector3(ob.position))));
 				}
 				continue;
 			}
@@ -1019,15 +1015,12 @@ void VoxelTerrain::_process() {
 
 			LoadingBlock loading_block;
 			{
-				LoadingBlock *loading_block_ptr = _loading_blocks.getptr(block_pos);
-
-				if (loading_block_ptr == nullptr) {
+				if (!_loading_blocks.has(block_pos)) {
 					// That block was not requested or is no longer needed, drop it.
 					++_stats.dropped_block_loads;
 					continue;
 				}
-
-				loading_block = *loading_block_ptr;
+				loading_block =  _loading_blocks[block_pos];
 			}
 
 			if (ob.dropped) {
@@ -1047,12 +1040,12 @@ void VoxelTerrain::_process() {
 
 			CRASH_COND(ob.voxels.is_null());
 
-			const Vector3i expected_block_size = Vector3i(_map.get_block_size());
+			const Vector3i expected_block_size = Vector3i(_map.get_block_size(), _map.get_block_size(), _map.get_block_size());
 			if (ob.voxels->get_size() != expected_block_size) {
 				// Voxel block size is incorrect, drop it
 				ERR_PRINT(String("Block size obtained from stream is different from expected size. "
 								 "Expected {0}, got {1}")
-								  .format(varray(expected_block_size.to_vec3(), ob.voxels->get_size().to_vec3())));
+								  .format(varray(Vector3(expected_block_size), Vector3(ob.voxels->get_size()))));
 				++_stats.dropped_block_loads;
 				continue;
 			}
@@ -1061,7 +1054,7 @@ void VoxelTerrain::_process() {
 			VoxelBlock *block = _map.get_block(block_pos);
 			const bool was_not_loaded = block == nullptr;
 			block = _map.set_block_buffer(block_pos, ob.voxels);
-			block->set_world(get_world());
+			block->set_world(get_world_3d());
 
 			if (was_not_loaded) {
 				// Set viewers count that are currently expecting the block
@@ -1238,7 +1231,7 @@ void VoxelTerrain::_process() {
 			int surface_index = 0;
 			for (int i = 0; i < ob.surfaces.surfaces.size(); ++i) {
 				Array surface = ob.surfaces.surfaces[i];
-				if (surface.empty()) {
+				if (surface.is_empty()) {
 					continue;
 				}
 
@@ -1250,7 +1243,7 @@ void VoxelTerrain::_process() {
 				collidable_surfaces.push_back(surface);
 
 				mesh->add_surface_from_arrays(
-						ob.surfaces.primitive_type, surface, Array(), ob.surfaces.compression_flags);
+						ob.surfaces.primitive_type, surface);
 				mesh->surface_set_material(surface_index, _materials[i]);
 				++surface_index;
 			}
@@ -1318,17 +1311,16 @@ bool VoxelTerrain::is_stream_running_in_editor() const {
 
 void VoxelTerrain::set_bounds(Rect3i box) {
 	_bounds_in_voxels = box.clipped(
-			Rect3i::from_center_extents(Vector3i(), Vector3i(VoxelConstants::MAX_VOLUME_EXTENT)));
+			Rect3i::from_center_extents(Vector3i(), Vector3i(VoxelConstants::MAX_VOLUME_EXTENT, VoxelConstants::MAX_VOLUME_EXTENT, VoxelConstants::MAX_VOLUME_EXTENT)));
 
 	// Round to block size
 	_bounds_in_voxels = _bounds_in_voxels.snapped(1 << get_block_size_pow2());
 
-	const unsigned int largest_dimension = static_cast<unsigned int>(max(max(box.size.x, box.size.y), box.size.z));
+	const unsigned int largest_dimension = static_cast<unsigned int>(MAX(MAX(box.size.x, box.size.y), box.size.z));
 	if (largest_dimension > MAX_VIEW_DISTANCE_FOR_LARGE_VOLUME) {
 		// Cap view distance to make sure you don't accidentally blow up memory when changing parameters
 		if (_max_view_distance_blocks > MAX_VIEW_DISTANCE_FOR_LARGE_VOLUME) {
-			_max_view_distance_blocks = min(_max_view_distance_blocks, MAX_VIEW_DISTANCE_FOR_LARGE_VOLUME);
-			_change_notify();
+			_max_view_distance_blocks = MIN(_max_view_distance_blocks, MAX_VIEW_DISTANCE_FOR_LARGE_VOLUME);
 		}
 	}
 	// TODO Editor gizmo bounds
@@ -1339,11 +1331,11 @@ Rect3i VoxelTerrain::get_bounds() const {
 }
 
 Vector3 VoxelTerrain::_b_voxel_to_block(Vector3 pos) {
-	return Vector3i(_map.voxel_to_block(pos)).to_vec3();
+	return Vector3i(_map.voxel_to_block(pos));
 }
 
 Vector3 VoxelTerrain::_b_block_to_voxel(Vector3 pos) {
-	return Vector3i(_map.block_to_voxel(pos)).to_vec3();
+	return Vector3i(_map.block_to_voxel(pos));
 }
 
 void VoxelTerrain::_b_save_modified_blocks() {
@@ -1371,7 +1363,7 @@ void VoxelTerrain::_b_set_bounds(AABB aabb) {
 
 AABB VoxelTerrain::_b_get_bounds() const {
 	const Rect3i b = get_bounds();
-	return AABB(b.pos.to_vec3(), b.size.to_vec3());
+	return AABB(Vector3(b.pos), Vector3(b.size));
 }
 
 void VoxelTerrain::_bind_methods() {

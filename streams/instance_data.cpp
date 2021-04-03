@@ -3,7 +3,7 @@
 #include "../util/array_slice.h"
 #include "../util/math/funcs.h"
 #include "../util/serialization.h"
-#include <core/variant.h>
+#include <core/variant/variant.h>
 
 namespace {
 const uint32_t TRAILING_MAGIC = 0x900df00d;
@@ -42,22 +42,22 @@ struct CompressedQuaternion4b {
 	}
 };
 
-void serialize_instance_block_data(const VoxelInstanceBlockData &src, std::vector<uint8_t> &dst) {
+void serialize_instance_block_data(const Ref<VoxelInstanceBlockData> &src, std::vector<uint8_t> &dst) {
 	const uint8_t version = 0;
 	const uint8_t instance_format = 0;
 
 	VoxelUtility::MemoryWriter w(dst, VoxelUtility::ENDIANESS_BIG_ENDIAN);
 
 	w.store_8(version);
-	w.store_8(src.layers.size());
-	w.store_float(src.position_range);
+	w.store_8(src->layers.size());
+	w.store_float(src->position_range);
 
 	// TODO Introduce a margin to position coordinates, stuff can spawn offset from the ground.
 	// Or just compute the ranges
-	const float pos_norm_scale = 1.f / src.position_range;
+	const float pos_norm_scale = 1.f / src->position_range;
 
-	for (size_t i = 0; i < src.layers.size(); ++i) {
-		const VoxelInstanceBlockData::LayerData &layer = src.layers[i];
+	for (size_t i = 0; i < src->layers.size(); ++i) {
+		const VoxelInstanceBlockData::LayerData &layer = src->layers[i];
 
 		w.store_16(layer.id);
 		w.store_16(layer.instances.size());
@@ -89,7 +89,7 @@ void serialize_instance_block_data(const VoxelInstanceBlockData &src, std::vecto
 	w.store_32(TRAILING_MAGIC);
 }
 
-bool deserialize_instance_block_data(VoxelInstanceBlockData &dst, ArraySlice<const uint8_t> src) {
+bool deserialize_instance_block_data(Ref<VoxelInstanceBlockData> &dst, ArraySlice<const uint8_t> src) {
 	const uint8_t expected_version = 0;
 	const uint8_t expected_instance_format = 0;
 
@@ -99,12 +99,12 @@ bool deserialize_instance_block_data(VoxelInstanceBlockData &dst, ArraySlice<con
 	ERR_FAIL_COND_V(version != expected_version, false);
 
 	const uint8_t layers_count = r.get_8();
-	dst.layers.resize(layers_count);
+	dst->layers.resize(layers_count);
 
-	dst.position_range = r.get_float();
+	dst->position_range = r.get_float();
 
-	for (size_t i = 0; i < dst.layers.size(); ++i) {
-		VoxelInstanceBlockData::LayerData &layer = dst.layers[i];
+	for (size_t i = 0; i < dst->layers.size(); ++i) {
+		VoxelInstanceBlockData::LayerData &layer = dst->layers[i];
 
 		layer.id = r.get_16();
 
@@ -120,9 +120,9 @@ bool deserialize_instance_block_data(VoxelInstanceBlockData &dst, ArraySlice<con
 		ERR_FAIL_COND_V(instance_format != expected_instance_format, false);
 
 		for (size_t j = 0; j < layer.instances.size(); ++j) {
-			const float x = (static_cast<float>(r.get_16()) / 0xffff) * dst.position_range;
-			const float y = (static_cast<float>(r.get_16()) / 0xffff) * dst.position_range;
-			const float z = (static_cast<float>(r.get_16()) / 0xffff) * dst.position_range;
+			const float x = (static_cast<float>(r.get_16()) / 0xffff) * dst->position_range;
+			const float y = (static_cast<float>(r.get_16()) / 0xffff) * dst->position_range;
+			const float z = (static_cast<float>(r.get_16()) / 0xffff) * dst->position_range;
 
 			const float s = (static_cast<float>(r.get_8()) / 0xff) * scale_range + layer.scale_min;
 

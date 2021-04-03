@@ -7,6 +7,7 @@
 
 #include <modules/opensimplex/open_simplex_noise.h>
 #include <scene/resources/curve.h>
+#include "core/math/math_funcs.h"
 
 namespace {
 VoxelGraphNodeDB *g_node_type_db = nullptr;
@@ -101,7 +102,7 @@ void do_division(VoxelGraphRuntime::ProcessBufferContext &ctx) {
 }
 
 inline float get_pixel_repeat(const Image &im, int x, int y) {
-	return im.get_pixel(wrap(x, im.get_width()), wrap(y, im.get_height())).r;
+	return im.get_pixel(Math::wrapi_zero(x, im.get_width()), Math::wrapi_zero(y, im.get_height())).r;
 }
 
 inline float get_pixel_repeat_linear(const Image &im, float x, float y) {
@@ -259,7 +260,7 @@ VoxelGraphNodeDB::VoxelGraphNodeDB() {
 		t.name = "Constant";
 		t.category = CATEGORY_INPUT;
 		t.outputs.push_back(Port("value"));
-		t.params.push_back(Param("value", Variant::REAL));
+		t.params.push_back(Param("value", Variant::FLOAT));
 	}
 	{
 		NodeType &t = types[VoxelGeneratorGraph::NODE_INPUT_X];
@@ -333,7 +334,7 @@ VoxelGraphNodeDB::VoxelGraphNodeDB() {
 			const Interval b = ctx.get_input(1);
 			if (ctx.get_input_address(0) == ctx.get_input_address(1)) {
 				// The two operands have the same source, we can optimize to a square function
-				ctx.set_output(0, squared(a));
+				ctx.set_output(0, Math::squared(a));
 			} else {
 				ctx.set_output(0, a * b);
 			}
@@ -431,12 +432,12 @@ VoxelGraphNodeDB::VoxelGraphNodeDB() {
 		t.inputs.push_back(Port("step"));
 		t.outputs.push_back(Port("out"));
 		t.process_buffer_func = [](ProcessBufferContext &ctx) {
-			do_binop(ctx, [](float a, float b) { return Math::stepify(a, b); });
+			do_binop(ctx, [](float a, float b) { return Math::snapped(a, b); });
 		};
 		t.range_analysis_func = [](RangeAnalysisContext &ctx) {
 			const Interval a = ctx.get_input(0);
 			const Interval b = ctx.get_input(1);
-			ctx.set_output(0, stepify(a, b));
+			ctx.set_output(0, snapped(a, b));
 		};
 	}
 	{
@@ -515,7 +516,7 @@ VoxelGraphNodeDB::VoxelGraphNodeDB() {
 			const Interval y1 = ctx.get_input(3);
 			const Interval dx = x1 - x0;
 			const Interval dy = y1 - y0;
-			const Interval r = sqrt(squared(dx) + squared(dy));
+			const Interval r = sqrt(Math::squared(dx) + Math::squared(dy));
 			ctx.set_output(0, r);
 		};
 	}
@@ -569,8 +570,8 @@ VoxelGraphNodeDB::VoxelGraphNodeDB() {
 		t.category = CATEGORY_CONVERT;
 		t.inputs.push_back(Port("x"));
 		t.outputs.push_back(Port("out"));
-		t.params.push_back(Param("min", Variant::REAL, -1.f));
-		t.params.push_back(Param("max", Variant::REAL, 1.f));
+		t.params.push_back(Param("min", Variant::FLOAT, -1.f));
+		t.params.push_back(Param("max", Variant::FLOAT, 1.f));
 		t.compile_func = [](CompileContext &ctx) {
 			Params p;
 			p.min = ctx.get_param(0).operator float();
@@ -660,10 +661,10 @@ VoxelGraphNodeDB::VoxelGraphNodeDB() {
 		t.category = CATEGORY_CONVERT;
 		t.inputs.push_back(Port("x"));
 		t.outputs.push_back(Port("out"));
-		t.params.push_back(Param("min0", Variant::REAL, -1.f));
-		t.params.push_back(Param("max0", Variant::REAL, 1.f));
-		t.params.push_back(Param("min1", Variant::REAL, -1.f));
-		t.params.push_back(Param("max1", Variant::REAL, 1.f));
+		t.params.push_back(Param("min0", Variant::FLOAT, -1.f));
+		t.params.push_back(Param("max0", Variant::FLOAT, 1.f));
+		t.params.push_back(Param("min1", Variant::FLOAT, -1.f));
+		t.params.push_back(Param("max1", Variant::FLOAT, 1.f));
 		t.compile_func = [](CompileContext &ctx) {
 			Params p;
 			const float min0 = ctx.get_param(0).operator float();
@@ -699,8 +700,8 @@ VoxelGraphNodeDB::VoxelGraphNodeDB() {
 		t.category = CATEGORY_CONVERT;
 		t.inputs.push_back(Port("x"));
 		t.outputs.push_back(Port("out"));
-		t.params.push_back(Param("edge0", Variant::REAL, 0.f));
-		t.params.push_back(Param("edge1", Variant::REAL, 1.f));
+		t.params.push_back(Param("edge0", Variant::FLOAT, 0.f));
+		t.params.push_back(Param("edge1", Variant::FLOAT, 1.f));
 		t.compile_func = [](CompileContext &ctx) {
 			Params p;
 			p.edge0 = ctx.get_param(0).operator float();
@@ -977,7 +978,7 @@ VoxelGraphNodeDB::VoxelGraphNodeDB() {
 			const VoxelGraphRuntime::Buffer &r = ctx.get_input(3);
 			VoxelGraphRuntime::Buffer &out = ctx.get_output(0);
 			for (uint32_t i = 0; i < out.size; ++i) {
-				out.data[i] = Math::sqrt(squared(x.data[i]) + squared(y.data[i]) + squared(z.data[i])) - r.data[i];
+				out.data[i] = Math::sqrt(Math::squared(x.data[i]) + Math::squared(y.data[i]) + Math::squared(z.data[i])) - r.data[i];
 			}
 		};
 		t.range_analysis_func = [](RangeAnalysisContext &ctx) {
@@ -1028,7 +1029,7 @@ VoxelGraphNodeDB::VoxelGraphNodeDB() {
 		t.inputs.push_back(Port("a"));
 		t.inputs.push_back(Port("b"));
 		t.outputs.push_back(Port("sdf"));
-		t.params.push_back(Param("smoothness", Variant::REAL, 0.f));
+		t.params.push_back(Param("smoothness", Variant::FLOAT, 0.f));
 		t.compile_func = [](CompileContext &ctx) {
 			Params p;
 			p.smoothness = ctx.get_param(0).operator float();
@@ -1102,7 +1103,7 @@ VoxelGraphNodeDB::VoxelGraphNodeDB() {
 		t.inputs.push_back(Port("a"));
 		t.inputs.push_back(Port("b"));
 		t.outputs.push_back(Port("sdf"));
-		t.params.push_back(Param("smoothness", Variant::REAL, 0.f));
+		t.params.push_back(Param("smoothness", Variant::FLOAT, 0.f));
 		t.compile_func = [](CompileContext &ctx) {
 			Params p;
 			p.smoothness = ctx.get_param(0).operator float();
@@ -1171,8 +1172,8 @@ VoxelGraphNodeDB::VoxelGraphNodeDB() {
 		t.name = "SdfPreview";
 		t.category = CATEGORY_DEBUG;
 		t.inputs.push_back(Port("value"));
-		t.params.push_back(Param("min_value", Variant::REAL, -1.f));
-		t.params.push_back(Param("max_value", Variant::REAL, 1.f));
+		t.params.push_back(Param("min_value", Variant::FLOAT, -1.f));
+		t.params.push_back(Param("max_value", Variant::FLOAT, 1.f));
 		t.debug_only = true;
 	}
 	{
@@ -1234,8 +1235,8 @@ VoxelGraphNodeDB::VoxelGraphNodeDB() {
 		t.inputs.push_back(Port("z"));
 		t.outputs.push_back(Port("sdf"));
 		t.params.push_back(Param("image", "Image"));
-		t.params.push_back(Param("radius", Variant::REAL, 10.f));
-		t.params.push_back(Param("factor", Variant::REAL, 1.f));
+		t.params.push_back(Param("radius", Variant::FLOAT, 10.f));
+		t.params.push_back(Param("factor", Variant::FLOAT, 1.f));
 
 		t.compile_func = [](CompileContext &ctx) {
 			Ref<Image> image = ctx.get_param(0);
@@ -1310,7 +1311,7 @@ VoxelGraphNodeDB::VoxelGraphNodeDB() {
 				const float x = xb.data[i];
 				const float y = yb.data[i];
 				const float z = zb.data[i];
-				const float len = Math::sqrt(squared(x) + squared(y) + squared(z));
+				const float len = Math::sqrt(Math::squared(x) + Math::squared(y) + Math::squared(z));
 				out_nx.data[i] = x / len;
 				out_ny.data[i] = y / len;
 				out_nz.data[i] = z / len;
@@ -1538,7 +1539,7 @@ VoxelGraphNodeDB::VoxelGraphNodeDB() {
 			p.index = param_index;
 
 			switch (p.type) {
-				case Variant::REAL:
+				case Variant::FLOAT:
 					if (p.default_value.get_type() == Variant::NIL) {
 						p.default_value = 0.f;
 					}

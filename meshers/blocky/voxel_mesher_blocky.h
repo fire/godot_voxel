@@ -3,7 +3,7 @@
 
 #include "../voxel_mesher.h"
 #include "voxel_library.h"
-#include <core/reference.h>
+#include "core/object/reference.h"
 #include <scene/resources/mesh.h>
 #include <vector>
 

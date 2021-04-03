@@ -68,8 +68,8 @@ void build_voxel_mesh_as_simple_cubes(
 				  block_size.y < static_cast<int>(2 * VoxelMesherCubes::PADDING) ||
 				  block_size.z < static_cast<int>(2 * VoxelMesherCubes::PADDING));
 
-	const Vector3i min_pos = Vector3i(VoxelMesherCubes::PADDING);
-	const Vector3i max_pos = block_size - Vector3i(VoxelMesherCubes::PADDING);
+	const Vector3i min_pos = Vector3i(VoxelMesherCubes::PADDING, VoxelMesherCubes::PADDING, VoxelMesherCubes::PADDING);
+	const Vector3i max_pos = block_size - Vector3i(VoxelMesherCubes::PADDING, VoxelMesherCubes::PADDING, VoxelMesherCubes::PADDING);
 	const unsigned int row_size = block_size.y;
 	const unsigned int deck_size = block_size.x * row_size;
 
@@ -111,7 +111,7 @@ void build_voxel_mesh_as_simple_cubes(
 					const uint8_t ai1 = get_alpha_index(color1);
 
 					Color8 color;
-					Side side;
+					int32_t side = 0;
 					if (ai0 == ai1) {
 						continue;
 					} else if (ai0 > ai1) {
@@ -215,8 +215,8 @@ void build_voxel_mesh_as_greedy_cubes(
 		}
 	};
 
-	const Vector3i min_pos = Vector3i(VoxelMesherCubes::PADDING);
-	const Vector3i max_pos = block_size - Vector3i(VoxelMesherCubes::PADDING);
+	const Vector3i min_pos = Vector3i(VoxelMesherCubes::PADDING, VoxelMesherCubes::PADDING, VoxelMesherCubes::PADDING);
+	const Vector3i max_pos = block_size - Vector3i(VoxelMesherCubes::PADDING, VoxelMesherCubes::PADDING, VoxelMesherCubes::PADDING);
 	const unsigned int row_size = block_size.y;
 	const unsigned int deck_size = block_size.x * row_size;
 
@@ -609,10 +609,10 @@ void VoxelMesherCubes::build(VoxelMesher::Output &output, const VoxelMesher::Inp
 			mesh_arrays.resize(Mesh::ARRAY_MAX);
 
 			{
-				PoolVector<Vector3> positions;
-				PoolVector<Vector3> normals;
-				PoolVector<Color> colors;
-				PoolVector<int> indices;
+				Vector<Vector3> positions;
+				Vector<Vector3> normals;
+				Vector<Color> colors;
+				Vector<int> indices;
 
 				raw_copy_to(positions, arrays.positions);
 				raw_copy_to(normals, arrays.normals);

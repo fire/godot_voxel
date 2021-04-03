@@ -9,10 +9,9 @@ FixedArray<Ref<Mesh>, ID_COUNT> g_wirecubes;
 bool g_finalized = false;
 
 template <typename T>
-void raw_copy_to(PoolVector<T> &dst, const T *src, unsigned int count) {
+void raw_copy_to(Vector<T> &dst, const T *src, unsigned int count) {
 	dst.resize(count);
-	typename PoolVector<T>::Write w = dst.write();
-	memcpy(w.ptr(), src, count * sizeof(T));
+	memcpy(dst.ptrw(), src, count * sizeof(T));
 }
 
 static Color get_color(ColorID id) {
@@ -45,16 +44,15 @@ Ref<Mesh> get_wirecube(ColorID id) {
 			Vector3(1, 1, 1),
 			Vector3(0, 1, 1)
 		};
-		PoolVector3Array positions;
+		Vector<Vector3> positions;
 		raw_copy_to(positions, positions_raw, 8);
 
 		Color white(1.0, 1.0, 1.0);
-		PoolColorArray colors;
+		Vector<Color> colors;
 		colors.resize(positions.size());
 		{
-			PoolColorArray::Write w = colors.write();
 			for (int i = 0; i < colors.size(); ++i) {
-				w[i] = white;
+				colors.ptrw()[i] = white;
 			}
 		}
 
@@ -74,7 +72,7 @@ Ref<Mesh> get_wirecube(ColorID id) {
 			2, 6,
 			3, 7
 		};
-		PoolIntArray indices;
+		PackedInt32Array indices;
 		raw_copy_to(indices, indices_raw, 24);
 
 		Array arrays;
@@ -85,10 +83,10 @@ Ref<Mesh> get_wirecube(ColorID id) {
 		Ref<ArrayMesh> mesh = memnew(ArrayMesh);
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_LINES, arrays);
 
-		Ref<SpatialMaterial> mat;
+		Ref<StandardMaterial3D> mat;
 		mat.instance();
 		mat->set_albedo(get_color(id));
-		mat->set_flag(SpatialMaterial::FLAG_UNSHADED, true);
+		mat->set_shading_mode(StandardMaterial3D::SHADING_MODE_UNSHADED);
 		mesh->surface_set_material(0, mat);
 
 		wirecube = mesh;
@@ -111,7 +109,7 @@ public:
 		// TODO When shadow casting is on, directional shadows completely break.
 		// The reason is still unknown.
 		// It should be off anyways, but it's rather concerning.
-		_mesh_instance.set_cast_shadows_setting(VisualServer::SHADOW_CASTING_SETTING_OFF);
+		_mesh_instance.set_cast_shadows_setting(RenderingServer::SHADOW_CASTING_SETTING_OFF);
 	}
 
 	void set_mesh(Ref<Mesh> mesh) {
@@ -135,7 +133,7 @@ public:
 		}
 	}
 
-	void set_world(World *world) {
+	void set_world(World3D *world) {
 		_mesh_instance.set_world(world);
 	}
 
@@ -157,7 +155,7 @@ void DebugRenderer::clear() {
 	_items.clear();
 }
 
-void DebugRenderer::set_world(World *world) {
+void DebugRenderer::set_world(World3D *world) {
 	_world = world;
 	for (auto it = _items.begin(); it != _items.end(); ++it) {
 		(*it)->set_world(world);

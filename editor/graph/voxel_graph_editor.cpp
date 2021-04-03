@@ -6,7 +6,7 @@
 
 #include <core/core_string_names.h>
 #include <core/os/os.h>
-#include <core/undo_redo.h>
+#include <core/object/undo_redo.h>
 #include <editor/editor_scale.h>
 #include <scene/gui/check_box.h>
 #include <scene/gui/dialogs.h>
@@ -40,7 +40,7 @@ public:
 	}
 
 	void update_texture() {
-		_texture->create_from_image(_image, 0);
+		_texture->create_from_image(_image);
 	}
 
 private:
@@ -63,14 +63,12 @@ class VoxelRangeAnalysisDialog : public AcceptDialog {
 public:
 	VoxelRangeAnalysisDialog() {
 		set_title(TTR("Debug Range Analysis"));
-		set_custom_minimum_size(EDSCALE * Vector2(300, 280));
-
 		VBoxContainer *vb = memnew(VBoxContainer);
 		//vb->set_anchors_preset(Control::PRESET_TOP_WIDE);
 
 		enabled_checkbox = memnew(CheckBox);
 		enabled_checkbox->set_text(TTR("Enabled"));
-		enabled_checkbox->connect("toggled", this, "_on_enabled_checkbox_toggled");
+		enabled_checkbox->connect("toggled", callable_mp(this, &VoxelRangeAnalysisDialog::_on_enabled_checkbox_toggled));
 		vb->add_child(enabled_checkbox);
 
 		Label *tip = memnew(Label);
@@ -128,7 +126,7 @@ private:
 		label->set_text(text);
 		parent->add_child(label);
 		parent->add_child(sb);
-		sb->connect("value_changed", this, "_on_area_spinbox_value_changed");
+		sb->connect("value_changed", callable_mp(this, &VoxelRangeAnalysisDialog::_on_area_spinbox_value_changed));
 	}
 
 	static void _bind_methods() {
@@ -152,19 +150,17 @@ private:
 
 VoxelGraphEditor::VoxelGraphEditor() {
 	VBoxContainer *vbox_container = memnew(VBoxContainer);
-	vbox_container->set_anchors_and_margins_preset(Control::PRESET_WIDE);
-
 	{
 		HBoxContainer *toolbar = memnew(HBoxContainer);
 
 		Button *update_previews_button = memnew(Button);
 		update_previews_button->set_text("Update Previews");
-		update_previews_button->connect("pressed", this, "_on_update_previews_button_pressed");
+		update_previews_button->connect("pressed", callable_mp(this, &VoxelGraphEditor::_on_update_previews_button_pressed));
 		toolbar->add_child(update_previews_button);
 
 		Button *profile_button = memnew(Button);
 		profile_button->set_text("Profile");
-		profile_button->connect("pressed", this, "_on_profile_button_pressed");
+		profile_button->connect("pressed", callable_mp(this, &VoxelGraphEditor::_on_profile_button_pressed));
 		toolbar->add_child(profile_button);
 
 		_profile_label = memnew(Label);
@@ -172,7 +168,7 @@ VoxelGraphEditor::VoxelGraphEditor() {
 
 		Button *range_analysis_button = memnew(Button);
 		range_analysis_button->set_text("Analyze Range...");
-		range_analysis_button->connect("pressed", this, "_on_analyze_range_button_pressed");
+		range_analysis_button->connect("pressed", callable_mp(this, &VoxelGraphEditor::_on_analyze_range_button_pressed));
 		toolbar->add_child(range_analysis_button);
 
 		vbox_container->add_child(toolbar);
@@ -182,12 +178,12 @@ VoxelGraphEditor::VoxelGraphEditor() {
 	_graph_edit->set_anchors_preset(Control::PRESET_WIDE);
 	_graph_edit->set_right_disconnects(true);
 	_graph_edit->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	_graph_edit->connect("gui_input", this, "_on_graph_edit_gui_input");
-	_graph_edit->connect("connection_request", this, "_on_graph_edit_connection_request");
-	_graph_edit->connect("delete_nodes_request", this, "_on_graph_edit_delete_nodes_request");
-	_graph_edit->connect("disconnection_request", this, "_on_graph_edit_disconnection_request");
-	_graph_edit->connect("node_selected", this, "_on_graph_edit_node_selected");
-	_graph_edit->connect("node_unselected", this, "_on_graph_edit_node_unselected");
+	_graph_edit->connect("gui_input", callable_mp(this, &VoxelGraphEditor::_on_graph_edit_gui_input));
+	_graph_edit->connect("connection_request", callable_mp(this, &VoxelGraphEditor::_on_graph_edit_connection_request));
+	_graph_edit->connect("delete_nodes_request", callable_mp(this, &VoxelGraphEditor::_on_graph_edit_delete_nodes_request));
+	_graph_edit->connect("disconnection_request", callable_mp(this, &VoxelGraphEditor::_on_graph_edit_disconnection_request));
+	_graph_edit->connect("node_selected", callable_mp(this, &VoxelGraphEditor::_on_graph_edit_node_selected));
+	_graph_edit->connect("node_unselected", callable_mp(this, &VoxelGraphEditor::_on_graph_edit_node_unselected));
 	vbox_container->add_child(_graph_edit);
 
 	add_child(vbox_container);
@@ -198,7 +194,7 @@ VoxelGraphEditor::VoxelGraphEditor() {
 		String name = VoxelGraphNodeDB::get_category_name(VoxelGraphNodeDB::Category(i));
 		PopupMenu *menu = memnew(PopupMenu);
 		menu->set_name(name);
-		menu->connect("id_pressed", this, "_on_context_menu_id_pressed");
+		menu->connect("id_pressed",  callable_mp(this, &VoxelGraphEditor::_on_context_menu_id_pressed));
 		_context_menu->add_child(menu);
 		_context_menu->add_submenu_item(name, name, i);
 		category_menus[i] = menu;
@@ -212,8 +208,8 @@ VoxelGraphEditor::VoxelGraphEditor() {
 	add_child(_context_menu);
 
 	_range_analysis_dialog = memnew(VoxelRangeAnalysisDialog);
-	_range_analysis_dialog->connect("analysis_toggled", this, "_on_range_analysis_toggled");
-	_range_analysis_dialog->connect("area_changed", this, "_on_range_analysis_area_changed");
+	_range_analysis_dialog->connect("analysis_toggled", callable_mp(this, &VoxelGraphEditor::_on_range_analysis_toggled));
+	_range_analysis_dialog->connect("area_changed",  callable_mp(this, &VoxelGraphEditor::_on_range_analysis_area_changed));
 	add_child(_range_analysis_dialog);
 }
 
@@ -223,15 +219,15 @@ void VoxelGraphEditor::set_graph(Ref<VoxelGeneratorGraph> graph) {
 	}
 
 	if (_graph.is_valid()) {
-		_graph->disconnect(CoreStringNames::get_singleton()->changed, this, "_on_graph_changed");
-		_graph->disconnect(VoxelGeneratorGraph::SIGNAL_NODE_NAME_CHANGED, this, "_on_graph_node_name_changed");
+		_graph->disconnect(CoreStringNames::get_singleton()->changed, callable_mp(this, &VoxelGraphEditor::_on_graph_changed));
+		_graph->disconnect(VoxelGeneratorGraph::SIGNAL_NODE_NAME_CHANGED, callable_mp(this, &VoxelGraphEditor::_on_graph_node_name_changed));
 	}
 
 	_graph = graph;
 
 	if (_graph.is_valid()) {
-		_graph->connect(CoreStringNames::get_singleton()->changed, this, "_on_graph_changed");
-		_graph->connect(VoxelGeneratorGraph::SIGNAL_NODE_NAME_CHANGED, this, "_on_graph_node_name_changed");
+		_graph->connect(CoreStringNames::get_singleton()->changed, callable_mp(this, &VoxelGraphEditor::_on_graph_changed));
+		_graph->connect(VoxelGeneratorGraph::SIGNAL_NODE_NAME_CHANGED, callable_mp(this, &VoxelGraphEditor::_on_graph_node_name_changed));
 	}
 
 	_debug_renderer.clear();
@@ -250,14 +246,14 @@ void VoxelGraphEditor::set_voxel_node(VoxelNode *node) {
 		_debug_renderer.set_world(nullptr);
 	} else {
 		PRINT_VERBOSE(String("Reference node for VoxelGraph previews: {0}").format(varray(node->get_path())));
-		_debug_renderer.set_world(_voxel_node->get_world().ptr());
+		_debug_renderer.set_world(_voxel_node->get_world_3d().ptr());
 	}
 }
 
 void VoxelGraphEditor::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_INTERNAL_PROCESS:
-			_process(get_tree()->get_idle_process_time());
+			_process(get_tree()->get_process_time());
 			break;
 
 		case NOTIFICATION_VISIBILITY_CHANGED:
@@ -304,11 +300,10 @@ void VoxelGraphEditor::build_gui_from_graph() {
 
 	// Nodes
 
-	PoolIntArray node_ids = graph.get_node_ids();
+	PackedInt32Array node_ids = graph.get_node_ids();
 	{
-		PoolIntArray::Read node_ids_read = node_ids.read();
 		for (int i = 0; i < node_ids.size(); ++i) {
-			const uint32_t node_id = node_ids_read[i];
+			const uint32_t node_id = node_ids.ptr()[i];
 			create_node_gui(node_id);
 		}
 	}
@@ -350,14 +345,15 @@ void VoxelGraphEditor::create_node_gui(uint32_t node_id) {
 	ERR_FAIL_COND(_graph_edit->has_node(ui_node_name));
 
 	VoxelGraphEditorNode *node_view = memnew(VoxelGraphEditorNode);
-	node_view->set_offset(graph.get_node_gui_position(node_id) * EDSCALE);
+	Vector2 pos = graph.get_node_gui_position(node_id) * EDSCALE;
+	node_view->set_position(pos);
 
 	StringName node_name = graph.get_node_name(node_id);
 	update_node_view_title(node_view, node_name, node_type.name);
 
 	node_view->set_name(ui_node_name);
 	node_view->node_id = node_id;
-	node_view->connect("dragged", this, "_on_graph_node_dragged", varray(node_id));
+	node_view->connect("dragged", callable_mp(this, &VoxelGraphEditor::_on_graph_node_dragged), varray(node_id));
 	//node_view.resizable = true
 	//node_view.rect_size = Vector2(200, 100)
 
@@ -369,8 +365,6 @@ void VoxelGraphEditor::create_node_gui(uint32_t node_id) {
 		const bool has_right = i < node_type.outputs.size();
 
 		HBoxContainer *property_control = memnew(HBoxContainer);
-		property_control->set_custom_minimum_size(Vector2(0, 24 * EDSCALE));
-
 		if (has_left) {
 			Label *label = memnew(Label);
 			label->set_text(node_type.inputs[i].name);
@@ -394,7 +388,7 @@ void VoxelGraphEditor::create_node_gui(uint32_t node_id) {
 		}
 
 		node_view->add_child(property_control);
-		node_view->set_slot(i, has_left, Variant::REAL, port_color, has_right, Variant::REAL, port_color);
+		node_view->set_slot(i, has_left, Variant::FLOAT, port_color, has_right, Variant::FLOAT, port_color);
 	}
 
 	if (node_type_id == VoxelGeneratorGraph::NODE_SDF_PREVIEW) {
@@ -463,7 +457,7 @@ void VoxelGraphEditor::_on_graph_edit_gui_input(Ref<InputEvent> event) {
 	if (mb.is_valid()) {
 		if (mb->is_pressed()) {
 
-			if (mb->get_button_index() == BUTTON_RIGHT) {
+			if (mb->get_button_index() == MOUSE_BUTTON_RIGHT) {
 				_click_position = mb->get_position();
 				_context_menu->set_position(get_global_mouse_position());
 				_context_menu->popup();
@@ -587,7 +581,7 @@ void VoxelGraphEditor::set_node_position(int id, Vector2 offset) {
 	String node_name = node_to_gui_name(id);
 	GraphNode *node_view = Object::cast_to<GraphNode>(_graph_edit->get_node(node_name));
 	if (node_view != nullptr) {
-		node_view->set_offset(offset);
+		node_view->set_position(offset);
 	}
 	_graph->set_node_gui_position(id, offset / EDSCALE);
 }
@@ -837,8 +831,6 @@ void VoxelGraphEditor::update_slice_previews() {
 		Image &im = **info.control->get_image();
 		ERR_FAIL_COND(im.get_width() * im.get_height() != static_cast<int>(buffer.size));
 
-		im.lock();
-
 		unsigned int i = 0;
 		for (int y = 0; y < im.get_height(); ++y) {
 			for (int x = 0; x < im.get_width(); ++x) {
@@ -848,8 +840,6 @@ void VoxelGraphEditor::update_slice_previews() {
 				++i;
 			}
 		}
-
-		im.unlock();
 
 		info.control->update_texture();
 	}
@@ -902,7 +892,7 @@ void VoxelGraphEditor::_on_profile_button_pressed() {
 }
 
 void VoxelGraphEditor::_on_analyze_range_button_pressed() {
-	_range_analysis_dialog->popup_centered_minsize();
+	_range_analysis_dialog->popup_centered();
 }
 
 void VoxelGraphEditor::_on_range_analysis_toggled(bool enabled) {

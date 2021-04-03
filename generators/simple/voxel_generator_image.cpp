@@ -1,11 +1,12 @@
 #include "voxel_generator_image.h"
 #include "../../util/array_slice.h"
 #include "../../util/fixed_array.h"
+#include "../../util/funcs.h"
 
 namespace {
 
 inline float get_height_repeat(const Image &im, int x, int y) {
-	return im.get_pixel(wrap(x, im.get_width()), wrap(y, im.get_height())).r;
+	return im.get_pixel(Math::wrapi_zero(x, im.get_width()), Math::wrapi_zero(y, im.get_height())).r;
 }
 
 inline float get_height_blurred(const Image &im, int x, int y) {
@@ -23,9 +24,6 @@ VoxelGeneratorImage::VoxelGeneratorImage() {
 }
 
 VoxelGeneratorImage::~VoxelGeneratorImage() {
-	if (_parameters.image.is_valid()) {
-		_parameters.image->unlock();
-	}
 }
 
 void VoxelGeneratorImage::set_image(Ref<Image> im) {
@@ -40,13 +38,7 @@ void VoxelGeneratorImage::set_image(Ref<Image> im) {
 	RWLockWrite wlock(_parameters_lock);
 	// lock() prevents us from reading the same image from multiple threads, so we lock it up-front.
 	// This might no longer be needed in Godot 4.
-	if (_parameters.image.is_valid()) {
-		_parameters.image->unlock();
-	}
 	_parameters.image = copy;
-	if (_parameters.image.is_valid()) {
-		_parameters.image->lock();
-	}
 }
 
 Ref<Image> VoxelGeneratorImage::get_image() const {

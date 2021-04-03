@@ -528,7 +528,7 @@ VoxelStreamSQLite::VoxelStreamSQLite() {
 
 VoxelStreamSQLite::~VoxelStreamSQLite() {
 	PRINT_VERBOSE("~VoxelStreamSQLite");
-	if (!_connection_path.empty() && _cache.get_indicative_block_count() > 0) {
+	if (!_connection_path.is_empty() && _cache.get_indicative_block_count() > 0) {
 		PRINT_VERBOSE("~VoxelStreamSQLite flushy flushy");
 		flush_cache();
 		PRINT_VERBOSE("~VoxelStreamSQLite flushy done");
@@ -545,7 +545,7 @@ void VoxelStreamSQLite::set_database_path(String path) {
 	if (path == _connection_path) {
 		return;
 	}
-	if (!_connection_path.empty() && _cache.get_indicative_block_count() > 0) {
+	if (!_connection_path.is_empty() && _cache.get_indicative_block_count() > 0) {
 		// Save cached data before changing the path.
 		// Not using get_connection() because it locks.
 		VoxelStreamSQLiteInternal con;
@@ -663,7 +663,7 @@ void VoxelStreamSQLite::immerge_blocks(const Vector<VoxelBlockRequest> &p_blocks
 		const Vector3i pos = r.origin_in_voxels >> bs_po2;
 
 		if (!BlockLocation::validate(pos, r.lod)) {
-			ERR_PRINT(String("Block position {0} is outside of supported range").format(varray(pos.to_vec3())));
+			ERR_PRINT(String("Block position {0} is outside of supported range").format(varray(Vector3(pos))));
 			continue;
 		}
 
@@ -731,8 +731,10 @@ void VoxelStreamSQLite::load_instance_blocks(
 				out_results[i] = RESULT_ERROR;
 				continue;
 			}
-			r.data = std::make_unique<VoxelInstanceBlockData>();
-			if (!deserialize_instance_block_data(*r.data, to_slice_const(_temp_block_data))) {
+			Ref<VoxelInstanceBlockData> new_block_data;
+            new_block_data.instance();
+			r.data = new_block_data;
+			if (!deserialize_instance_block_data(r.data, to_slice_const(_temp_block_data))) {
 				ERR_PRINT("Failed to deserialize instance block");
 				out_results[i] = RESULT_ERROR;
 				continue;
@@ -811,7 +813,7 @@ void VoxelStreamSQLite::flush_cache(VoxelStreamSQLiteInternal *con) {
 		if (block.instances != nullptr) {
 			temp_data.clear();
 
-			serialize_instance_block_data(*block.instances, temp_data);
+			serialize_instance_block_data(block.instances, temp_data);
 
 			ERR_FAIL_COND(!VoxelCompressedData::compress(
 					to_slice_const(temp_data), temp_compressed_data, VoxelCompressedData::COMPRESSION_NONE));
@@ -826,7 +828,7 @@ void VoxelStreamSQLite::flush_cache(VoxelStreamSQLiteInternal *con) {
 
 VoxelStreamSQLiteInternal *VoxelStreamSQLite::get_connection() {
 	_connection_mutex.lock();
-	if (_connection_path.empty()) {
+	if (_connection_path.is_empty()) {
 		_connection_mutex.unlock();
 		return nullptr;
 	}
@@ -839,7 +841,7 @@ VoxelStreamSQLiteInternal *VoxelStreamSQLite::get_connection() {
 	String fpath = _connection_path;
 	_connection_mutex.unlock();
 
-	if (fpath.empty()) {
+	if (fpath.is_empty()) {
 		return nullptr;
 	}
 	VoxelStreamSQLiteInternal *con = new VoxelStreamSQLiteInternal();

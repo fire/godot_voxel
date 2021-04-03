@@ -38,7 +38,7 @@ public:
 
 		Type type;
 		Ref<VoxelBuffer> voxels;
-		std::unique_ptr<VoxelInstanceBlockData> instances;
+		Ref<VoxelInstanceBlockData> instances;
 		Vector3i position;
 		uint8_t lod;
 		bool dropped;
@@ -93,7 +93,7 @@ public:
 	void request_block_mesh(uint32_t volume_id, BlockMeshInput &input);
 	void request_block_load(uint32_t volume_id, Vector3i block_pos, int lod, bool request_instances);
 	void request_voxel_block_save(uint32_t volume_id, Ref<VoxelBuffer> voxels, Vector3i block_pos, int lod);
-	void request_instance_block_save(uint32_t volume_id, std::unique_ptr<VoxelInstanceBlockData> instances,
+	void request_instance_block_save(uint32_t volume_id, Ref<VoxelInstanceBlockData> instances,
 			Vector3i block_pos, int lod);
 	void remove_volume(uint32_t volume_id);
 
@@ -250,7 +250,7 @@ private:
 		bool is_cancelled() override;
 
 		Ref<VoxelBuffer> voxels;
-		std::unique_ptr<VoxelInstanceBlockData> instances;
+		Ref<VoxelInstanceBlockData> instances;
 		Vector3i position;
 		uint32_t volume_id;
 		uint8_t lod;

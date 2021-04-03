@@ -1,9 +1,9 @@
 #ifndef VOXEL_INSTANCE_LIBRARY_ITEM_H
 #define VOXEL_INSTANCE_LIBRARY_ITEM_H
 
-#include <core/resource.h>
+#include "core/io/resource.h"
 #include <scene/resources/mesh.h>
-#include <scene/resources/shape.h>
+#include "scene/resources/shape_3d.h"
 
 #include "../../util/fixed_array.h"
 #include "voxel_instance_generator.h"
@@ -16,7 +16,7 @@ public:
 
 	struct CollisionShapeInfo {
 		Transform transform;
-		Ref<Shape> shape;
+		Ref<Shape3D> shape;
 	};
 
 	enum ChangeType {

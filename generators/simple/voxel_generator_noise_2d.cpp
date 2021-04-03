@@ -1,6 +1,6 @@
 #include "voxel_generator_noise_2d.h"
 #include <core/core_string_names.h>
-#include <core/engine.h>
+#include <core/config/engine.h>
 
 VoxelGeneratorNoise2D::VoxelGeneratorNoise2D() {
 #ifdef TOOLS_ENABLED
@@ -21,12 +21,12 @@ void VoxelGeneratorNoise2D::set_noise(Ref<OpenSimplexNoise> noise) {
 		return;
 	}
 	if (_noise.is_valid()) {
-		_noise->disconnect(CoreStringNames::get_singleton()->changed, this, "_on_noise_changed");
+		_noise->disconnect(CoreStringNames::get_singleton()->changed, callable_mp(this, &VoxelGeneratorNoise2D::_on_noise_changed));
 	}
 	_noise = noise;
 	Ref<OpenSimplexNoise> copy;
 	if (_noise.is_valid()) {
-		_noise->connect(CoreStringNames::get_singleton()->changed, this, "_on_noise_changed");
+		_noise->connect(CoreStringNames::get_singleton()->changed, callable_mp(this, &VoxelGeneratorNoise2D::_on_noise_changed));
 		// The OpenSimplexNoise resource is not thread-safe so we make a copy of it for use in threads
 		copy = _noise->duplicate();
 	}
@@ -43,12 +43,12 @@ void VoxelGeneratorNoise2D::set_curve(Ref<Curve> curve) {
 		return;
 	}
 	if (_curve.is_valid()) {
-		_curve->disconnect(CoreStringNames::get_singleton()->changed, this, "_on_curve_changed");
+		_curve->disconnect(CoreStringNames::get_singleton()->changed, callable_mp(this, &VoxelGeneratorNoise2D::_on_curve_changed));
 	}
 	_curve = curve;
 	RWLockWrite wlock(_parameters_lock);
 	if (_curve.is_valid()) {
-		_curve->connect(CoreStringNames::get_singleton()->changed, this, "_on_curve_changed");
+		_curve->connect(CoreStringNames::get_singleton()->changed,  callable_mp(this, &VoxelGeneratorNoise2D::_on_curve_changed));
 		// The Curve resource is not thread-safe so we make a copy of it for use in threads
 		_parameters.curve = _curve->duplicate();
 		_parameters.curve->bake();

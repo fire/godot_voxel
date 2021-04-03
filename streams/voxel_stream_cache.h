@@ -4,7 +4,6 @@
 #include "../storage/voxel_buffer.h"
 #include "instance_data.h"
 #include <memory>
-#include <unordered_map>
 
 // In-memory database for voxel streams.
 // It allows to cache blocks so we can save to the filesystem less frequently, or quickly reload recent blocks.
@@ -20,7 +19,7 @@ public:
 		bool has_voxels = false;
 
 		Ref<VoxelBuffer> voxels;
-		std::unique_ptr<VoxelInstanceBlockData> instances;
+		Ref<VoxelInstanceBlockData> instances;
 	};
 
 	// Copies cached block into provided buffer
@@ -31,10 +30,10 @@ public:
 
 	// Copies cached data into the provided pointer. A new instance will be made if found.
 	bool load_instance_block(
-			Vector3i position, uint8_t lod_index, std::unique_ptr<VoxelInstanceBlockData> &out_instances);
+			Vector3i position, uint8_t lod_index, Ref<VoxelInstanceBlockData> &out_instances);
 
 	// Stores provided block into the cache. The cache will take ownership of the provided data.
-	void save_instance_block(Vector3i position, uint8_t lod_index, std::unique_ptr<VoxelInstanceBlockData> instances);
+	void save_instance_block(Vector3i position, uint8_t lod_index, Ref<VoxelInstanceBlockData> instances);
 
 	unsigned int get_indicative_block_count() const;
 
@@ -44,8 +43,8 @@ public:
 		for (unsigned int lod_index = 0; lod_index < _cache.size(); ++lod_index) {
 			Lod &lod = _cache[lod_index];
 			RWLockWrite wlock(lod.rw_lock);
-			for (auto it = lod.blocks.begin(); it != lod.blocks.end(); ++it) {
-				Block &block = it->second;
+			for (Map<Vector3i, VoxelStreamCache::Block>::Element * it = lod.blocks.front(); it; it = it->next()) {
+				Block &block = it->get();
 				save_func(block);
 			}
 			lod.blocks.clear();
@@ -54,7 +53,7 @@ public:
 
 private:
 	struct Lod {
-		std::unordered_map<Vector3i, Block> blocks;
+		Map<Vector3i, Block> blocks;
 		RWLock rw_lock;
 	};
 

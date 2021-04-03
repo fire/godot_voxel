@@ -29,7 +29,7 @@ VoxelStream::Result VoxelStreamBlockFiles::emerge_block(
 
 	ERR_FAIL_COND_V(out_buffer.is_null(), RESULT_ERROR);
 
-	if (_directory_path.empty()) {
+	if (_directory_path.is_empty()) {
 		return RESULT_BLOCK_NOT_FOUND;
 	}
 
@@ -41,7 +41,7 @@ VoxelStream::Result VoxelStreamBlockFiles::emerge_block(
 
 	CRASH_COND(!_meta_loaded);
 
-	const Vector3i block_size(1 << _meta.block_size_po2);
+	const Vector3i block_size(1 << _meta.block_size_po2, 1 << _meta.block_size_po2, 1 << _meta.block_size_po2);
 
 	ERR_FAIL_COND_V(lod >= _meta.lod_count, RESULT_ERROR);
 	ERR_FAIL_COND_V(block_size != out_buffer->get_size(), RESULT_ERROR);
@@ -92,7 +92,7 @@ VoxelStream::Result VoxelStreamBlockFiles::emerge_block(
 }
 
 void VoxelStreamBlockFiles::immerge_block(Ref<VoxelBuffer> buffer, Vector3i origin_in_voxels, int lod) {
-	ERR_FAIL_COND(_directory_path.empty());
+	ERR_FAIL_COND(_directory_path.is_empty());
 	ERR_FAIL_COND(buffer.is_null());
 
 	if (!_meta_loaded) {
@@ -117,7 +117,7 @@ void VoxelStreamBlockFiles::immerge_block(Ref<VoxelBuffer> buffer, Vector3i orig
 	}
 
 	// Check format
-	const Vector3i block_size = Vector3i(1 << _meta.block_size_po2);
+	const Vector3i block_size = Vector3i(1 << _meta.block_size_po2, 1 << _meta.block_size_po2, 1 << _meta.block_size_po2);
 	ERR_FAIL_COND(buffer->get_size() != block_size);
 	for (unsigned int channel_index = 0; channel_index < _meta.channel_depths.size(); ++channel_index) {
 		ERR_FAIL_COND(buffer->get_channel_depth(channel_index) != _meta.channel_depths[channel_index]);
@@ -174,7 +174,7 @@ int VoxelStreamBlockFiles::get_block_size_po2() const {
 }
 
 VoxelFileResult VoxelStreamBlockFiles::save_meta() {
-	CRASH_COND(_directory_path.empty());
+	CRASH_COND(_directory_path.is_empty());
 
 	// Make sure the directory exists
 	{
@@ -222,7 +222,7 @@ VoxelFileResult VoxelStreamBlockFiles::load_or_create_meta() {
 }
 
 VoxelFileResult VoxelStreamBlockFiles::load_meta() {
-	CRASH_COND(_directory_path.empty());
+	CRASH_COND(_directory_path.is_empty());
 
 	String meta_path = _directory_path.plus_file(META_FILE_NAME);
 

@@ -2,7 +2,7 @@
 #define VOXEL_BLOCK_REQUEST_H
 
 #include "../storage/voxel_buffer.h"
-#include "../util/math/vector3i.h"
+#include "core/math/vector3i.h"
 #include "instance_data.h"
 #include <memory>
 
@@ -14,7 +14,7 @@ struct VoxelBlockRequest {
 };
 
 struct VoxelStreamInstanceDataRequest {
-	std::unique_ptr<VoxelInstanceBlockData> data;
+	Ref<VoxelInstanceBlockData> data;
 	Vector3i position;
 	uint8_t lod;
 };

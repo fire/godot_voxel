@@ -69,7 +69,7 @@ bool Voxel::_get(const StringName &p_name, Variant &r_ret) const {
 
 void Voxel::_get_property_list(List<PropertyInfo> *p_list) const {
 	if (_geometry_type == GEOMETRY_CUBE) {
-		p_list->push_back(PropertyInfo(Variant::REAL, "cube_geometry/padding_y"));
+		p_list->push_back(PropertyInfo(Variant::FLOAT, "cube_geometry/padding_y"));
 		p_list->push_back(PropertyInfo(Variant::VECTOR2, "cube_tiles/left"));
 		p_list->push_back(PropertyInfo(Variant::VECTOR2, "cube_tiles/right"));
 		p_list->push_back(PropertyInfo(Variant::VECTOR2, "cube_tiles/bottom"));
@@ -110,7 +110,7 @@ void Voxel::set_transparent(bool t) {
 }
 
 void Voxel::set_transparency_index(int i) {
-	_transparency_index = clamp(i, 0, 255);
+	_transparency_index = CLAMP(i, 0, 255);
 }
 
 void Voxel::set_geometry_type(GeometryType type) {
@@ -256,13 +256,13 @@ static void bake_mesh_geometry(Voxel &config, Voxel::BakedData &baked_data, bool
 
 	ERR_FAIL_COND(arrays.size() == 0);
 
-	PoolIntArray indices = arrays[Mesh::ARRAY_INDEX];
+	Vector<int32_t> indices = arrays[Mesh::ARRAY_INDEX];
 	ERR_FAIL_COND_MSG(indices.size() % 3 != 0, "Mesh is empty or does not contain triangles");
 
-	PoolVector3Array positions = arrays[Mesh::ARRAY_VERTEX];
-	PoolVector3Array normals = arrays[Mesh::ARRAY_NORMAL];
-	PoolVector2Array uvs = arrays[Mesh::ARRAY_TEX_UV];
-	PoolVector<float> tangents = arrays[Mesh::ARRAY_TANGENT];
+	Vector<Vector3> positions = arrays[Mesh::ARRAY_VERTEX];
+	Vector<Vector3> normals = arrays[Mesh::ARRAY_NORMAL];
+	Vector<Vector2> uvs = arrays[Mesh::ARRAY_TEX_UV];
+	Vector<float> tangents = arrays[Mesh::ARRAY_TANGENT];
 
 	baked_data.empty = positions.size() == 0;
 
@@ -301,7 +301,7 @@ static void bake_mesh_geometry(Voxel &config, Voxel::BakedData &baked_data, bool
 
 	if (uvs.size() == 0) {
 		// TODO Properly generate UVs if there arent any
-		uvs = PoolVector2Array();
+		uvs = Vector<Vector2>();
 		uvs.resize(positions.size());
 	}
 
@@ -318,12 +318,6 @@ static void bake_mesh_geometry(Voxel &config, Voxel::BakedData &baked_data, bool
 
 	// Separate triangles belonging to faces of the cube
 	{
-		PoolIntArray::Read indices_read = indices.read();
-		PoolVector3Array::Read positions_read = positions.read();
-		PoolVector3Array::Read normals_read = normals.read();
-		PoolVector2Array::Read uvs_read = uvs.read();
-		PoolVector<float>::Read tangents_read = tangents.read();
-
 		FixedArray<HashMap<int, int>, Cube::SIDE_COUNT> added_side_indices;
 		HashMap<int, int> added_regular_indices;
 		FixedArray<Vector3, 3> tri_positions;
@@ -333,16 +327,16 @@ static void bake_mesh_geometry(Voxel &config, Voxel::BakedData &baked_data, bool
 		for (int i = 0; i < indices.size(); i += 3) {
 			Cube::SideAxis side;
 
-			tri_positions[0] = positions_read[indices_read[i]];
-			tri_positions[1] = positions_read[indices_read[i + 1]];
-			tri_positions[2] = positions_read[indices_read[i + 2]];
+			tri_positions[0] = positions.ptr()[indices.ptr()[i]];
+			tri_positions[1] = positions.ptr()[indices.ptr()[i + 1]];
+			tri_positions[2] = positions.ptr()[indices.ptr()[i + 2]];
 
 			FixedArray<float, 4> tangent;
 
 			if (tangents_empty && bake_tangents) {
 				//If tangents are empty then we calculate them
-				Vector2 delta_uv1 = uvs_read[indices_read[i + 1]] - uvs_read[indices_read[i]];
-				Vector2 delta_uv2 = uvs_read[indices_read[i + 2]] - uvs_read[indices_read[i]];
+				Vector2 delta_uv1 = uvs.ptr()[indices.ptr()[i + 1]] - uvs.ptr()[indices.ptr()[i]];
+				Vector2 delta_uv2 = uvs.ptr()[indices.ptr()[i + 2]] - uvs.ptr()[indices.ptr()[i]];
 				Vector3 delta_pos1 = tri_positions[1] - tri_positions[0];
 				Vector3 delta_pos2 = tri_positions[2] - tri_positions[0];
 				float r = 1.0f / (delta_uv1[0] * delta_uv2[1] - delta_uv1[1] * delta_uv2[0]);
@@ -351,7 +345,7 @@ static void bake_mesh_geometry(Voxel &config, Voxel::BakedData &baked_data, bool
 				tangent[0] = t[0];
 				tangent[1] = t[1];
 				tangent[2] = t[2];
-				tangent[3] = (bt.dot(normals_read[indices_read[i]].cross(t))) < 0 ? -1.0f : 1.0f;
+				tangent[3] = (bt.dot(normals.ptr()[indices.ptr()[i]].cross(t))) < 0 ? -1.0f : 1.0f;
 			}
 
 			if (L::get_triangle_side(tri_positions[0], tri_positions[1], tri_positions[2], side)) {
@@ -360,7 +354,7 @@ static void bake_mesh_geometry(Voxel &config, Voxel::BakedData &baked_data, bool
 				int next_side_index = model.side_positions[side].size();
 
 				for (int j = 0; j < 3; ++j) {
-					int src_index = indices_read[i + j];
+					int src_index = indices.ptr()[i + j];
 					const int *existing_dst_index = added_side_indices[side].getptr(src_index);
 
 					if (existing_dst_index == nullptr) {
@@ -368,7 +362,7 @@ static void bake_mesh_geometry(Voxel &config, Voxel::BakedData &baked_data, bool
 
 						model.side_indices[side].push_back(next_side_index);
 						model.side_positions[side].push_back(tri_positions[j]);
-						model.side_uvs[side].push_back(uvs_read[indices_read[i + j]]);
+						model.side_uvs[side].push_back(uvs.ptr()[indices.ptr()[i + j]]);
 
 						if (bake_tangents) {
 							if (tangents_empty) {
@@ -381,10 +375,10 @@ static void bake_mesh_geometry(Voxel &config, Voxel::BakedData &baked_data, bool
 								// i is the first vertex of each triangle which increments by steps of 3.
 								// There are 4 floats per tangent.
 								int ti = (i / 3) * 4;
-								model.side_tangents[side].push_back(tangents_read[ti]);
-								model.side_tangents[side].push_back(tangents_read[ti + 1]);
-								model.side_tangents[side].push_back(tangents_read[ti + 2]);
-								model.side_tangents[side].push_back(tangents_read[ti + 3]);
+								model.side_tangents[side].push_back(tangents.ptr()[ti]);
+								model.side_tangents[side].push_back(tangents.ptr()[ti + 1]);
+								model.side_tangents[side].push_back(tangents.ptr()[ti + 2]);
+								model.side_tangents[side].push_back(tangents.ptr()[ti + 3]);
 							}
 						}
 
@@ -403,14 +397,14 @@ static void bake_mesh_geometry(Voxel &config, Voxel::BakedData &baked_data, bool
 				int next_regular_index = model.positions.size();
 
 				for (int j = 0; j < 3; ++j) {
-					int src_index = indices_read[i + j];
+					int src_index = indices.ptr()[i + j];
 					const int *existing_dst_index = added_regular_indices.getptr(src_index);
 
 					if (existing_dst_index == nullptr) {
 						model.indices.push_back(next_regular_index);
 						model.positions.push_back(tri_positions[j]);
-						model.normals.push_back(normals_read[indices_read[i + j]]);
-						model.uvs.push_back(uvs_read[indices_read[i + j]]);
+						model.normals.push_back(normals.ptr()[indices.ptr()[i + j]]);
+						model.uvs.push_back(uvs.ptr()[indices.ptr()[i + j]]);
 
 						if (bake_tangents) {
 							if (tangents_empty) {
@@ -423,10 +417,10 @@ static void bake_mesh_geometry(Voxel &config, Voxel::BakedData &baked_data, bool
 								// i is the first vertex of each triangle which increments by steps of 3.
 								// There are 4 floats per tangent.
 								int ti = (i / 3) * 4;
-								model.tangents.push_back(tangents_read[ti]);
-								model.tangents.push_back(tangents_read[ti + 1]);
-								model.tangents.push_back(tangents_read[ti + 2]);
-								model.tangents.push_back(tangents_read[ti + 3]);
+								model.tangents.push_back(tangents.ptr()[ti]);
+								model.tangents.push_back(tangents.ptr()[ti + 1]);
+								model.tangents.push_back(tangents.ptr()[ti + 2]);
+								model.tangents.push_back(tangents.ptr()[ti + 3]);
 							}
 						}
 

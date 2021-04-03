@@ -1,11 +1,11 @@
 #include "funcs.h"
 
-#include <core/engine.h>
+#include <core/config/engine.h>
 #include <scene/resources/mesh.h>
 
 bool is_surface_triangulated(Array surface) {
-	PoolVector3Array positions = surface[Mesh::ARRAY_VERTEX];
-	PoolIntArray indices = surface[Mesh::ARRAY_INDEX];
+	Vector<Vector3> positions = surface[Mesh::ARRAY_VERTEX];
+	Vector<int32_t> indices = surface[Mesh::ARRAY_INDEX];
 	return positions.size() >= 3 && indices.size() >= 3;
 }
 
@@ -39,11 +39,11 @@ bool try_call_script(
 	}
 #endif
 
-	Variant::CallError err;
+	Callable::CallError err; err;
 	Variant ret = script->call(method_name, args, argc, err);
 
 	// TODO Why does Variant::get_call_error_text want a non-const Object pointer??? It only uses const methods
-	ERR_FAIL_COND_V_MSG(err.error != Variant::CallError::CALL_OK, false,
+	ERR_FAIL_COND_V_MSG(err.error != Callable::CallError::CALL_OK, false,
 			Variant::get_call_error_text(const_cast<Object *>(obj), method_name, nullptr, 0, err));
 	// This had to be explicitely logged due to the usual GD debugger not working with threads
 

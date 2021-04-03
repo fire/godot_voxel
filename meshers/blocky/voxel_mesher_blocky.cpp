@@ -9,10 +9,9 @@
 namespace {
 
 template <typename T>
-void raw_copy_to(PoolVector<T> &to, const Vector<T> &from) {
+void raw_copy_to(Vector<T> &to, const Vector<T> &from) {
 	to.resize(from.size());
-	typename PoolVector<T>::Write w = to.write();
-	memcpy(w.ptr(), from.ptr(), from.size() * sizeof(T));
+	memcpy(to.ptrw(), from.ptr(), from.size() * sizeof(T));
 }
 
 const int g_opposite_side[6] = {
@@ -68,8 +67,8 @@ static void generate_blocky_mesh(
 	const int deck_size = block_size.x * row_size;
 
 	// Data must be padded, hence the off-by-one
-	const Vector3i min = Vector3i(VoxelMesherBlocky::PADDING);
-	const Vector3i max = block_size - Vector3i(VoxelMesherBlocky::PADDING);
+	const Vector3i min = Vector3i(VoxelMesherBlocky::PADDING, VoxelMesherBlocky::PADDING, VoxelMesherBlocky::PADDING);
+	const Vector3i max = block_size - Vector3i(VoxelMesherBlocky::PADDING, VoxelMesherBlocky::PADDING, VoxelMesherBlocky::PADDING);
 
 	int index_offsets[VoxelMesherBlocky::MAX_MATERIALS] = { 0 };
 
@@ -242,7 +241,7 @@ static void generate_blocky_mesh(
 							arrays.normals.resize(arrays.normals.size() + vertex_count);
 							Vector3 *w = arrays.normals.data() + append_index;
 							for (unsigned int i = 0; i < vertex_count; ++i) {
-								w[i] = Cube::g_side_normals[side].to_vec3();
+								w[i] = Vector3(Cube::g_side_normals[side]);
 							}
 						}
 
@@ -372,7 +371,7 @@ Ref<VoxelLibrary> VoxelMesherBlocky::get_library() const {
 
 void VoxelMesherBlocky::set_occlusion_darkness(float darkness) {
 	RWLockWrite wlock(_parameters_lock);
-	_parameters.baked_occlusion_darkness = clamp(darkness, 0.0f, 1.0f);
+	_parameters.baked_occlusion_darkness = CLAMP(darkness, 0.0f, 1.0f);
 }
 
 float VoxelMesherBlocky::get_occlusion_darkness() const {
@@ -500,11 +499,11 @@ void VoxelMesherBlocky::build(VoxelMesher::Output &output, const VoxelMesher::In
 			mesh_arrays.resize(Mesh::ARRAY_MAX);
 
 			{
-				PoolVector<Vector3> positions;
-				PoolVector<Vector2> uvs;
-				PoolVector<Vector3> normals;
-				PoolVector<Color> colors;
-				PoolVector<int> indices;
+				Vector<Vector3> positions;
+				Vector<Vector2> uvs;
+				Vector<Vector3> normals;
+				Vector<Color> colors;
+				Vector<int> indices;
 
 				raw_copy_to(positions, arrays.positions);
 				raw_copy_to(uvs, arrays.uvs);
@@ -518,7 +517,7 @@ void VoxelMesherBlocky::build(VoxelMesher::Output &output, const VoxelMesher::In
 				mesh_arrays[Mesh::ARRAY_COLOR] = colors;
 				mesh_arrays[Mesh::ARRAY_INDEX] = indices;
 				if (arrays.tangents.size() > 0) {
-					PoolVector<float> tangents;
+					Vector<float> tangents;
 					raw_copy_to(tangents, arrays.tangents);
 					mesh_arrays[Mesh::ARRAY_TANGENT] = tangents;
 				}
@@ -568,6 +567,6 @@ void VoxelMesherBlocky::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "library", PROPERTY_HINT_RESOURCE_TYPE, "VoxelLibrary"),
 			"set_library", "get_library");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "occlusion_enabled"), "set_occlusion_enabled", "get_occlusion_enabled");
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "occlusion_darkness", PROPERTY_HINT_RANGE, "0,1,0.01"),
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "occlusion_darkness", PROPERTY_HINT_RANGE, "0,1,0.01"),
 			"set_occlusion_darkness", "get_occlusion_darkness");
 }

@@ -2,7 +2,7 @@
 #define ARRAY_SLICE_H
 
 #include "fixed_array.h"
-#include <core/error_macros.h>
+#include "core/error/error_macros.h"
 #include <vector>
 
 // TODO Rename Span

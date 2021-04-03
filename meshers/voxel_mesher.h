@@ -20,7 +20,6 @@ public:
 		Vector<Array> surfaces;
 		FixedArray<Vector<Array>, Cube::SIDE_COUNT> transition_surfaces;
 		Mesh::PrimitiveType primitive_type = Mesh::PRIMITIVE_TRIANGLES;
-		unsigned int compression_flags = Mesh::ARRAY_COMPRESS_DEFAULT;
 	};
 
 	// This can be called from multiple threads at once. Make sure member vars are protected or thread-local.
@@ -37,7 +36,7 @@ public:
 	// If this is not respected, the mesher might produce seams at the edges, or an error
 	unsigned int get_maximum_padding() const;
 
-	virtual Ref<Resource> duplicate(bool p_subresources = false) const { return Ref<Resource>(); }
+	virtual Ref<Resource> duplicate(bool p_subresources = false) const override { return Ref<Resource>(); }
 
 	virtual int get_used_channels_mask() const { return 0; }
 

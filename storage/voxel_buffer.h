@@ -6,9 +6,9 @@
 #include "../util/fixed_array.h"
 #include "../util/math/rect3i.h"
 
-#include <core/map.h>
-#include <core/reference.h>
-#include <core/vector.h>
+#include <core/templates/map.h>
+#include "core/object/reference.h"
+#include "core/templates/vector.h"
 
 class VoxelTool;
 class Image;
@@ -207,11 +207,11 @@ public:
 	}
 
 	static inline uint8_t norm_to_u8(float v) {
-		return clamp(static_cast<int>(128.f * v + 128.f), 0, 0xff);
+		return CLAMP(static_cast<int>(128.f * v + 128.f), 0, 0xff);
 	}
 
 	static inline uint16_t norm_to_u16(float v) {
-		return clamp(static_cast<int>(0x8000 * v + 0x8000), 0, 0xffff);
+		return CLAMP(static_cast<int>(0x8000 * v + 0x8000), 0, 0xffff);
 	}
 
 	/*static inline float quantized_u8_to_real(uint8_t v) {
@@ -236,8 +236,8 @@ public:
 	void set_block_metadata(Variant meta);
 	Variant get_voxel_metadata(Vector3i pos) const;
 	void set_voxel_metadata(Vector3i pos, Variant meta);
-	void for_each_voxel_metadata(Ref<FuncRef> callback) const;
-	void for_each_voxel_metadata_in_area(Ref<FuncRef> callback, Rect3i box) const;
+	// void for_each_voxel_metadata(Ref<FuncRef> callback) const;
+	// void for_each_voxel_metadata_in_area(Ref<FuncRef> callback, Rect3i box) const;
 	void clear_voxel_metadata();
 	void clear_voxel_metadata_in_area(Rect3i box);
 	void copy_voxel_metadata_in_area(Ref<VoxelBuffer> src_buffer, Rect3i src_box, Vector3i dst_origin);
@@ -266,7 +266,7 @@ private:
 	int get_size_z() const { return _size.z; }
 
 	// Bindings
-	Vector3 _b_get_size() const { return _size.to_vec3(); }
+	Vector3 _b_get_size() const { return _size; }
 	void _b_create(int x, int y, int z) { create(x, y, z); }
 	uint64_t _b_get_voxel(int x, int y, int z, unsigned int channel) const { return get_voxel(x, y, z, channel); }
 	void _b_set_voxel(uint64_t value, int x, int y, int z, unsigned int channel) { set_voxel(value, x, y, z, channel); }
@@ -277,8 +277,8 @@ private:
 	void _b_set_voxel_v(uint64_t value, Vector3 pos, unsigned int channel_index = 0) { set_voxel(value, pos.x, pos.y, pos.z, channel_index); }
 	void _b_downscale_to(Ref<VoxelBuffer> dst, Vector3 src_min, Vector3 src_max, Vector3 dst_min) const;
 	Variant _b_get_voxel_metadata(Vector3 pos) const { return get_voxel_metadata(Vector3i(pos)); }
-	void _b_set_voxel_metadata(Vector3 pos, Variant meta) { set_voxel_metadata(Vector3i(pos), meta); }
-	void _b_for_each_voxel_metadata_in_area(Ref<FuncRef> callback, Vector3 min_pos, Vector3 max_pos);
+	// void _b_set_voxel_metadata(Vector3 pos, Variant meta) { set_voxel_metadata(Vector3i(pos), meta); }
+	// void _b_for_each_voxel_metadata_in_area(Ref<FuncRef> callback, Vector3 min_pos, Vector3 max_pos);
 	void _b_clear_voxel_metadata_in_area(Vector3 min_pos, Vector3 max_pos);
 	void _b_copy_voxel_metadata_in_area(Ref<VoxelBuffer> src_buffer, Vector3 src_min_pos, Vector3 src_max_pos, Vector3 dst_pos);
 

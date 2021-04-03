@@ -4,8 +4,10 @@
 #include "../util/funcs.h"
 #include "../util/macros.h"
 #include "../util/profiling.h"
+
 #include <core/os/memory.h>
 #include <scene/main/viewport.h>
+#include "scene/main/window.h"
 #include <thread>
 
 namespace {
@@ -216,7 +218,7 @@ void VoxelServer::invalidate_volume_mesh_requests(uint32_t volume_id) {
 }
 
 static inline Vector3i get_block_center(Vector3i pos, int bs, int lod) {
-	return (pos << lod) * bs + Vector3i(bs / 2);
+	return (pos << lod) * bs + Vector3i(bs / 2, bs / 2, bs / 2);
 }
 
 void VoxelServer::init_priority_dependency(
@@ -225,7 +227,7 @@ void VoxelServer::init_priority_dependency(
 	const Vector3i voxel_pos = get_block_center(block_position, volume.block_size, lod);
 	const float block_radius = (volume.block_size << lod) / 2;
 	dep.shared = _world.shared_priority_dependency;
-	dep.world_position = volume.transform.xform(voxel_pos.to_vec3());
+	dep.world_position = volume.transform.xform(Vector3(voxel_pos));
 	const float transformed_block_radius =
 			volume.transform.basis.xform(Vector3(block_radius, block_radius, block_radius)).length();
 
@@ -233,14 +235,14 @@ void VoxelServer::init_priority_dependency(
 		case VOLUME_SPARSE_GRID:
 			// Distance beyond which no field of view can overlap the block
 			dep.drop_distance_squared =
-					squared(_world.shared_priority_dependency->highest_view_distance + transformed_block_radius);
+					Math::squared(_world.shared_priority_dependency->highest_view_distance + transformed_block_radius);
 			break;
 
 		case VOLUME_SPARSE_OCTREE:
 			// Distance beyond which it is safe to drop a block without risking to block LOD subdivision.
 			// This does not depend on viewer's view distance, but on LOD precision instead.
 			dep.drop_distance_squared =
-					squared(2.f * transformed_block_radius *
+					Math::squared(2.f * transformed_block_radius *
 							get_octree_lod_block_region_extent(volume.octree_lod_distance, volume.block_size));
 			break;
 
@@ -324,7 +326,7 @@ void VoxelServer::request_voxel_block_save(uint32_t volume_id, Ref<VoxelBuffer> 
 	_streaming_thread_pool.enqueue(r);
 }
 
-void VoxelServer::request_instance_block_save(uint32_t volume_id, std::unique_ptr<VoxelInstanceBlockData> instances,
+void VoxelServer::request_instance_block_save(uint32_t volume_id, Ref<VoxelInstanceBlockData> instances,
 		Vector3i block_pos, int lod) {
 
 	const Volume &volume = _world.volumes.get(volume_id);
@@ -367,7 +369,7 @@ void VoxelServer::request_block_save_from_generate_request(BlockGenerateRequest 
 	// This can be called from another thread
 
 	PRINT_VERBOSE(String("Requesting save of generator output for block {0} lod {1}")
-						  .format(varray(src->position.to_vec3(), src->lod)));
+						  .format(varray(Vector3(src->position), src->lod)));
 
 	ERR_FAIL_COND(src->voxels.is_null());
 
@@ -701,8 +703,7 @@ void VoxelServer::BlockDataRequest::run(VoxelTaskContext ctx) {
 				// On the other hand, if we want to represent the fact that "everything was deleted here",
 				// this should not be null.
 
-				PRINT_VERBOSE(String("Saving instance block {0} lod {1} with data {2}")
-									  .format(varray(position.to_vec3(), lod, ptr2s(instances.get()))));
+				print_verbose(vformat("Saving instance block %s lod %s with data %s", position, lod, ptr2s(instances.ptr())));
 
 				VoxelStreamInstanceDataRequest instance_data_request;
 				instance_data_request.lod = lod;
@@ -800,8 +801,8 @@ static void copy_block_and_neighbors(const FixedArray<Ref<VoxelBuffer>, Cube::MO
 		dst.set_channel_depth(ci, central_buffer->get_channel_depth(ci));
 	}
 
-	const Vector3i min_pos = -Vector3i(min_padding);
-	const Vector3i max_pos = Vector3i(block_size + max_padding);
+	const Vector3i min_pos = -Vector3i(min_padding, min_padding, min_padding);
+	const Vector3i max_pos = Vector3i(block_size + max_padding, block_size + max_padding, block_size + max_padding);
 
 	for (unsigned int i = 0; i < Cube::MOORE_AREA_3D_COUNT; ++i) {
 		const Vector3i offset = block_size * Cube::g_ordered_moore_area_3d[i];
@@ -879,7 +880,7 @@ void VoxelServerUpdater::ensure_existence(SceneTree *st) {
 	if (g_updater_created) {
 		return;
 	}
-	Viewport *root = st->get_root();
+	Window *root = st->get_root();
 	for (int i = 0; i < root->get_child_count(); ++i) {
 		VoxelServerUpdater *u = Object::cast_to<VoxelServerUpdater>(root->get_child(i));
 		if (u != nullptr) {

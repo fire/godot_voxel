@@ -2,6 +2,8 @@
 #include "../../util/macros.h"
 #include <bitset>
 
+#include "core/math/geometry_2d.h"
+
 VoxelLibrary::VoxelLibrary() {
 }
 
@@ -19,7 +21,6 @@ void VoxelLibrary::set_voxel_count(unsigned int type_count) {
 	}
 	// Note: a smaller size may cause a loss of data
 	_voxel_types.resize(type_count);
-	_change_notify();
 	_needs_baking = true;
 }
 
@@ -47,7 +48,7 @@ void VoxelLibrary::load_default() {
 // TODO Add a way to add voxels
 
 bool VoxelLibrary::_set(const StringName &p_name, const Variant &p_value) {
-	//	if(p_name == "voxels/max") {
+	//	if(p_name == "voxels/MAX") {
 
 	//		int v = p_value;
 	//		_max_count = CLAMP(v, 0, MAX_VOXEL_TYPES);
@@ -67,7 +68,7 @@ bool VoxelLibrary::_set(const StringName &p_name, const Variant &p_value) {
 }
 
 bool VoxelLibrary::_get(const StringName &p_name, Variant &r_ret) const {
-	//	if(p_name == "voxels/max") {
+	//	if(p_name == "voxels/MAX") {
 
 	//		r_ret = _max_count;
 	//		return true;
@@ -135,17 +136,17 @@ static void rasterize_triangle_barycentric(Vector2 a, Vector2 b, Vector2 c, F ou
 	b += 0.001 * (b - m);
 	c += 0.001 * (c - m);
 
-	const int min_x = (int)Math::floor(min(min(a.x, b.x), c.x));
-	const int min_y = (int)Math::floor(min(min(a.y, b.y), c.y));
-	const int max_x = (int)Math::ceil(max(max(a.x, b.x), c.x));
-	const int max_y = (int)Math::ceil(max(max(a.y, b.y), c.y));
+	const int min_x = (int)Math::floor(MIN(MIN(a.x, b.x), c.x));
+	const int min_y = (int)Math::floor(MIN(MIN(a.y, b.y), c.y));
+	const int max_x = (int)Math::ceil(MAX(MAX(a.x, b.x), c.x));
+	const int max_y = (int)Math::ceil(MAX(MAX(a.y, b.y), c.y));
 
 	// We test against points centered on grid cells
 	const Vector2 offset(0.5, 0.5);
 
 	for (int y = min_y; y < max_y; ++y) {
 		for (int x = min_x; x < max_x; ++x) {
-			if (Geometry::is_point_in_triangle(Vector2(x, y) + offset, a, b, c)) {
+			if (Geometry2D::is_point_in_triangle(Vector2(x, y) + offset, a, b, c)) {
 				output_func(x, y);
 			}
 		}
@@ -177,7 +178,7 @@ void VoxelLibrary::bake() {
 
 void VoxelLibrary::generate_side_culling_matrix() {
 	// When two blocky voxels are next to each other, they share a side.
-	// Geometry of either side can be culled away if covered by the other,
+	// Geometry3D of either side can be culled away if covered by the other,
 	// but it's very expensive to do a full polygon check when we build the mesh.
 	// So instead, we compute which sides occlude which for every voxel type,
 	// and generate culling masks ahead of time, using an approximation.
@@ -355,7 +356,7 @@ void VoxelLibrary::generate_side_culling_matrix() {
 		Ref<Image> im;
 		im.instance();
 		im->create(RASTER_SIZE, RASTER_SIZE, false, Image::FORMAT_RGB8);
-		im->lock();
+		
 		for (int y = 0; y < RASTER_SIZE; ++y) {
 			for (int x = 0; x < RASTER_SIZE; ++x) {
 				if (p.bitmap.test(x + y * RASTER_SIZE)) {
@@ -365,7 +366,7 @@ void VoxelLibrary::generate_side_culling_matrix() {
 				}
 			}
 		}
-		im->unlock();
+		
 		im->save_png(line + ".png");
 	}
 	{

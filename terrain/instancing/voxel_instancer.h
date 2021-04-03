@@ -9,7 +9,7 @@
 #include "voxel_instance_generator.h"
 #include "voxel_instance_library.h"
 
-#include <scene/3d/spatial.h>
+#include <scene/3d/node_3d.h>
 //#include <scene/resources/material.h> // Included by node.h lol
 #include <limits>
 #include <memory>
@@ -25,8 +25,8 @@ class PhysicsBody;
 
 // Add-on to voxel nodes, allowing to spawn elements on the surface.
 // These elements are rendered with hardware instancing, can have collisions, and also be persistent.
-class VoxelInstancer : public Spatial, public VoxelInstanceLibrary::IListener {
-	GDCLASS(VoxelInstancer, Spatial)
+class VoxelInstancer : public Node3D, public VoxelInstanceLibrary::IListener {
+	GDCLASS(VoxelInstancer, Node3D)
 public:
 	static const int MAX_LOD = 8;
 
@@ -54,7 +54,7 @@ public:
 	// Event handlers
 
 	void on_block_data_loaded(Vector3i grid_position, unsigned int lod_index,
-			std::unique_ptr<VoxelInstanceBlockData> instances);
+			Ref<VoxelInstanceBlockData> instances);
 	void on_block_enter(Vector3i grid_position, unsigned int lod_index, Array surface_arrays);
 	void on_block_exit(Vector3i grid_position, unsigned int lod_index);
 	void on_area_edited(Rect3i p_voxel_box);
@@ -79,7 +79,7 @@ private:
 	void remove_layer(int layer_id);
 	int create_block(Layer *layer, uint16_t layer_id, Vector3i grid_position);
 	void remove_block(unsigned int block_index);
-	void set_world(World *world);
+	void set_world(World3D *world);
 	void clear_blocks();
 	void clear_blocks_in_layer(int layer_id);
 	void clear_layers();
@@ -90,12 +90,12 @@ private:
 	void regenerate_layer(uint16_t layer_id, bool regenerate_blocks);
 	void update_layer_meshes(int layer_id);
 
-	void create_blocks(const VoxelInstanceBlockData *instances_data, Vector3i grid_position, int lod_index,
+	void create_blocks(const Ref<VoxelInstanceBlockData> instances_data, Vector3i grid_position, int lod_index,
 			Array surface_arrays);
 
 	void update_block_from_transforms(int block_index, ArraySlice<const Transform> transforms,
 			Vector3i grid_position, Layer *layer, const VoxelInstanceLibraryItem *item, uint16_t layer_id,
-			World *world, const Transform &block_transform);
+			World3D *world, const Transform &block_transform);
 
 	void on_library_item_changed(int item_id, VoxelInstanceLibraryItem::ChangeType change) override;
 
@@ -114,7 +114,7 @@ private:
 
 	struct Layer {
 		unsigned int lod_index;
-		HashMap<Vector3i, unsigned int, Vector3iHasher> blocks;
+		Map<Vector3i, unsigned int> blocks;
 	};
 
 	struct MeshLodDistances {
@@ -135,13 +135,13 @@ private:
 		std::vector<int> layers;
 
 		// Blocks that have have unsaved changes
-		HashMap<Vector3i, bool, Vector3iHasher> modified_blocks;
+		Map<Vector3i, bool> modified_blocks;
 
 		// This is a temporary place to store loaded instances data while it's not visible yet.
 		// These instances are user-authored ones. If a block does not have an entry there,
 		// it will get generated instances.
 		// Can't use `HashMap` because it lacks move semantics.
-		std::unordered_map<Vector3i, std::unique_ptr<VoxelInstanceBlockData> > loaded_instances_data;
+		Map<Vector3i, Ref<VoxelInstanceBlockData> > loaded_instances_data;
 
 		FixedArray<MeshLodDistances, VoxelInstanceLibraryItem::MAX_MESH_LODS> mesh_lod_distances;
 

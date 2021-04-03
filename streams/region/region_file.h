@@ -4,7 +4,7 @@
 #include "../../storage/voxel_buffer.h"
 #include "../../util/fixed_array.h"
 #include "../../util/math/color8.h"
-#include "../../util/math/vector3i.h"
+#include "core/math/vector3i.h"
 #include <vector>
 
 class FileAccess;

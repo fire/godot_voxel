@@ -1,12 +1,12 @@
 #ifndef VOXEL_DEBUG_H
 #define VOXEL_DEBUG_H
 
-#include <core/reference.h>
+#include "core/object/reference.h"
 #include <vector>
 
 class Mesh;
 class DirectMeshInstance;
-class World;
+class World3D;
 
 namespace VoxelDebug {
 
@@ -26,7 +26,7 @@ class DebugRenderer {
 public:
 	~DebugRenderer();
 
-	void set_world(World *world);
+	void set_world(World3D *world);
 
 	void begin();
 	void draw_box(Transform t, ColorID color);
@@ -37,7 +37,7 @@ private:
 	std::vector<DebugRendererItem *> _items;
 	unsigned int _current = 0;
 	bool _inside_block = false;
-	World *_world = nullptr;
+	World3D *_world = nullptr;
 };
 
 } // namespace VoxelDebug

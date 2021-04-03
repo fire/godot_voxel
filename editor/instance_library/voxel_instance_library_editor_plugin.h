@@ -10,7 +10,7 @@ class ConfirmationDialog;
 class VoxelInstanceLibraryEditorPlugin : public EditorPlugin {
 	GDCLASS(VoxelInstanceLibraryEditorPlugin, EditorPlugin)
 public:
-	virtual String get_name() const { return "VoxelInstanceLibrary"; }
+	virtual String get_name() const override { return "VoxelInstanceLibrary"; }
 
 	VoxelInstanceLibraryEditorPlugin(EditorNode *p_node);
 

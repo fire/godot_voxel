@@ -5,7 +5,7 @@
 #include "voxel_map.h"
 #include "voxel_node.h"
 
-#include <scene/3d/spatial.h>
+#include <scene/3d/node_3d.h>
 
 class VoxelTool;
 
@@ -167,7 +167,7 @@ private:
 		VoxelViewerRefCount viewers;
 	};
 
-	HashMap<Vector3i, LoadingBlock, Vector3iHasher> _loading_blocks;
+	Map<Vector3i, LoadingBlock> _loading_blocks;
 	std::vector<Vector3i> _blocks_pending_load;
 	std::vector<Vector3i> _blocks_pending_update;
 	std::vector<BlockToSave> _blocks_to_save;

@@ -1,12 +1,11 @@
 #ifndef HEADER_VOXEL_UTILITY_H
 #define HEADER_VOXEL_UTILITY_H
 
-#include <core/pool_vector.h>
-#include <core/vector.h>
+#include "core/templates/vector.h"
 #include <vector>
 
 #ifdef DEBUG_ENABLED
-#include <core/error_macros.h>
+#include "core/error/error_macros.h"
 #endif
 
 // Takes elements starting from a given position and moves them at the beginning,
@@ -95,12 +94,13 @@ inline void append_array(std::vector<T> &dst, const std::vector<T> &src) {
 //	vec.resize(j);
 //}
 
+
+// TODO Cleanup by using memcopy 2011-04-03 iFire
 template <typename T>
-void copy_to(PoolVector<T> &to, const Vector<T> &from) {
+void copy_to(Vector<T> &to, const Vector<T> &from) {
 	to.resize(from.size());
-	typename PoolVector<T>::Write w = to.write();
 	for (unsigned int i = 0; i < from.size(); ++i) {
-		w[i] = from[i];
+		to.ptrw()[i] = from[i];
 	}
 }
 
@@ -109,10 +109,9 @@ inline String ptr2s(const void *p) {
 }
 
 template <typename T>
-void raw_copy_to(PoolVector<T> &to, const std::vector<T> &from) {
+void raw_copy_to(Vector<T> &to, const std::vector<T> &from) {
 	to.resize(from.size());
-	typename PoolVector<T>::Write w = to.write();
-	memcpy(w.ptr(), from.data(), from.size() * sizeof(T));
+	memcpy(to.ptrw(), from.data(), from.size() * sizeof(T));
 }
 
 #endif // HEADER_VOXEL_UTILITY_H

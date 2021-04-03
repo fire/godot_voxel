@@ -5,8 +5,8 @@
 
 class TextureRect;
 
-class VoxelAboutWindow : public WindowDialog {
-	GDCLASS(VoxelAboutWindow, WindowDialog)
+class VoxelAboutWindow : public Window {
+	GDCLASS(VoxelAboutWindow, Window)
 public:
 	VoxelAboutWindow();
 

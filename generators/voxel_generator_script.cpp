@@ -8,7 +8,7 @@ VoxelGeneratorScript::VoxelGeneratorScript() {
 void VoxelGeneratorScript::generate_block(VoxelBlockRequest &input) {
 	ERR_FAIL_COND(input.voxel_buffer.is_null());
 	try_call_script(this, VoxelStringNames::get_singleton()->_generate_block,
-			input.voxel_buffer, input.origin_in_voxels.to_vec3(), input.lod, nullptr);
+			input.voxel_buffer, Vector3(input.origin_in_voxels), input.lod, nullptr);
 }
 
 int VoxelGeneratorScript::get_used_channels_mask() const {

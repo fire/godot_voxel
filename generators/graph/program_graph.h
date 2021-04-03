@@ -1,9 +1,9 @@
 #ifndef PROGRAM_GRAPH_H
 #define PROGRAM_GRAPH_H
 
-#include <core/hashfuncs.h>
+#include "core/templates/hashfuncs.h"
 #include <core/math/vector2.h>
-#include <core/pool_vector.h>
+#include "core/templates/vector.h"
 #include <unordered_map>
 #include <vector>
 
@@ -71,7 +71,7 @@ public:
 
 	uint32_t find_node_by_name(StringName name) const;
 
-	PoolVector<int> get_node_ids() const;
+	Vector<int> get_node_ids() const;
 	uint32_t generate_node_id();
 
 	void debug_print_dot_file(String file_path) const;

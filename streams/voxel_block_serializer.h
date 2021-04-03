@@ -2,7 +2,7 @@
 #define VOXEL_BLOCK_SERIALIZER_H
 
 #include <core/io/file_access_memory.h>
-#include <core/reference.h>
+#include "core/object/reference.h"
 #include <vector>
 
 class VoxelBuffer;

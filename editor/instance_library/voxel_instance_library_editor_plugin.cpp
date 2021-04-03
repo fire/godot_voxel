@@ -12,13 +12,13 @@ VoxelInstanceLibraryEditorPlugin::VoxelInstanceLibraryEditorPlugin(EditorNode *p
 	_menu_button->get_popup()->add_item(TTR("Add Item"), MENU_ADD_ITEM);
 	_menu_button->get_popup()->add_item(TTR("Remove Selected Item"), MENU_REMOVE_ITEM);
 	// TODO Add and update from scene
-	_menu_button->get_popup()->connect("id_pressed", this, "_on_menu_id_pressed");
+	_menu_button->get_popup()->connect("id_pressed", callable_mp(this, &VoxelInstanceLibraryEditorPlugin::_on_menu_id_pressed));
 	_menu_button->hide();
 
 	Control *base_control = get_editor_interface()->get_base_control();
 
 	_confirmation_dialog = memnew(ConfirmationDialog);
-	_confirmation_dialog->connect("confirmed", this, "_on_remove_item_confirmed");
+	_confirmation_dialog->connect("confirmed", callable_mp(this, &VoxelInstanceLibraryEditorPlugin::_on_remove_item_confirmed));
 	base_control->add_child(_confirmation_dialog);
 
 	_info_dialog = memnew(AcceptDialog);
@@ -49,7 +49,7 @@ void VoxelInstanceLibraryEditorPlugin::_on_menu_id_pressed(int id) {
 			Ref<VoxelInstanceLibraryItem> item;
 			item.instance();
 			// Setup some defaults
-			Ref<CubeMesh> mesh;
+			Ref<BoxMesh> mesh;
 			mesh.instance();
 			item->set_mesh(mesh, 0);
 			item->set_lod_index(2);

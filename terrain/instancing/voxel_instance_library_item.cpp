@@ -2,9 +2,9 @@
 #include "voxel_instancer.h"
 
 #include <core/core_string_names.h>
-#include <scene/3d/collision_shape.h>
-#include <scene/3d/mesh_instance.h>
-#include <scene/3d/physics_body.h>
+#include "scene/3d/collision_shape_3d.h"
+#include "scene/3d/mesh_instance_3d.h"
+#include "scene/3d/physics_body_3d.h"
 
 void VoxelInstanceLibraryItem::set_item_name(String name) {
 	_name = name;
@@ -32,11 +32,11 @@ void VoxelInstanceLibraryItem::set_generator(Ref<VoxelInstanceGenerator> generat
 		return;
 	}
 	if (_generator.is_valid()) {
-		_generator->disconnect(CoreStringNames::get_singleton()->changed, this, "_on_generator_changed");
+		_generator->disconnect(CoreStringNames::get_singleton()->changed, callable_mp(this, &VoxelInstanceLibraryItem::_on_generator_changed));
 	}
 	_generator = generator;
 	if (_generator.is_valid()) {
-		_generator->connect(CoreStringNames::get_singleton()->changed, this, "_on_generator_changed");
+		_generator->connect(CoreStringNames::get_singleton()->changed, callable_mp(this, &VoxelInstanceLibraryItem::_on_generator_changed));
 	}
 	notify_listeners(CHANGE_GENERATOR);
 }
@@ -113,14 +113,14 @@ int VoxelInstanceLibraryItem::get_collision_mask() const {
 void VoxelInstanceLibraryItem::setup_from_template(Node *root) {
 	_collision_shapes.clear();
 
-	PhysicsBody *physics_body = Object::cast_to<PhysicsBody>(root);
+	PhysicsBody3D *physics_body = Object::cast_to<PhysicsBody3D>(root);
 	if (physics_body != nullptr) {
 		_collision_layer = physics_body->get_collision_layer();
 		_collision_mask = physics_body->get_collision_mask();
 	}
 
 	for (int i = 0; i < root->get_child_count(); ++i) {
-		MeshInstance *mi = Object::cast_to<MeshInstance>(root->get_child(i));
+		MeshInstance3D *mi = Object::cast_to<MeshInstance3D>(root->get_child(i));
 		if (mi != nullptr) {
 			_mesh_lods[0] = mi->get_mesh();
 			_mesh_lod_count = 1;
@@ -128,7 +128,7 @@ void VoxelInstanceLibraryItem::setup_from_template(Node *root) {
 		}
 
 		if (physics_body != nullptr) {
-			CollisionShape *cs = Object::cast_to<CollisionShape>(physics_body->get_child(i));
+			CollisionShape3D *cs = Object::cast_to<CollisionShape3D>(physics_body->get_child(i));
 
 			if (cs != nullptr) {
 				CollisionShapeInfo info;

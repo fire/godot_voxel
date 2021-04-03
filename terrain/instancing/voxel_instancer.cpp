@@ -5,19 +5,19 @@
 #include "../../util/profiling.h"
 #include "../voxel_lod_terrain.h"
 
-#include <scene/3d/camera.h>
-#include <scene/3d/collision_shape.h>
-#include <scene/3d/mesh_instance.h>
-#include <scene/3d/physics_body.h>
+#include "scene/3d/camera_3d.h"
+#include "scene/3d/collision_shape_3d.h"
+#include "scene/3d/mesh_instance_3d.h"
+#include "scene/3d/physics_body_3d.h"
 #include <scene/main/viewport.h>
 #include <algorithm>
 
-class VoxelInstancerRigidBody : public RigidBody {
-	GDCLASS(VoxelInstancerRigidBody, RigidBody);
+class VoxelInstancerRigidBody : public RigidBody3D {
+	GDCLASS(VoxelInstancerRigidBody, RigidBody3D);
 
 public:
 	VoxelInstancerRigidBody() {
-		set_mode(RigidBody::MODE_STATIC);
+		set_mode(RigidBody3D::MODE_STATIC);
 	}
 
 	void set_block_index(int block_index) {
@@ -128,7 +128,7 @@ void VoxelInstancer::clear_layers() {
 void VoxelInstancer::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_WORLD:
-			set_world(*get_world());
+			set_world(*get_world_3d());
 			update_visibility();
 			break;
 
@@ -172,7 +172,7 @@ void VoxelInstancer::_notification(int p_what) {
 					continue;
 				}
 				const int block_size_po2 = base_block_size_po2 + block->lod_index;
-				const Vector3 block_local_pos = (block->grid_position << block_size_po2).to_vec3();
+				const Vector3 block_local_pos = block->grid_position << block_size_po2;
 				// The local block transform never has rotation or scale so we can take a shortcut
 				const Transform block_transform(parent_transform.basis, parent_transform.xform(block_local_pos));
 				block->multimesh_instance.set_transform(block_transform);
@@ -209,7 +209,7 @@ void VoxelInstancer::process_mesh_lods() {
 
 	// Get viewer position
 	const Viewport *viewport = get_viewport();
-	const Camera *camera = viewport->get_camera();
+	const Camera3D *camera = viewport->get_camera();
 	if (camera == nullptr) {
 		return;
 	}
@@ -263,7 +263,7 @@ void VoxelInstancer::process_mesh_lods() {
 
 		const int lod_block_size = block_size << lod_index;
 		const int hs = lod_block_size >> 1;
-		const Vector3 block_center_local = (block->grid_position * lod_block_size + Vector3i(hs, hs, hs)).to_vec3();
+		const Vector3 block_center_local = block->grid_position * lod_block_size + Vector3i(hs, hs, hs);
 		const float distance_squared = cam_pos_local.distance_squared_to(block_center_local);
 
 		if (block->current_mesh_lod + 1 < mesh_lod_count &&
@@ -299,7 +299,7 @@ void VoxelInstancer::update_visibility() {
 	}
 }
 
-void VoxelInstancer::set_world(World *world) {
+void VoxelInstancer::set_world(World3D *world) {
 	for (auto it = _blocks.begin(); it != _blocks.end(); ++it) {
 		Block *block = *it;
 		if (block->multimesh_instance.is_valid()) {
@@ -359,9 +359,9 @@ void VoxelInstancer::regenerate_layer(uint16_t layer_id, bool regenerate_blocks)
 	VOXEL_PROFILE_SCOPE();
 	ERR_FAIL_COND(_parent == nullptr);
 
-	Ref<World> world_ref = get_world();
+	Ref<World3D> world_ref = get_world_3d();
 	ERR_FAIL_COND(world_ref.is_null());
-	World *world = *world_ref;
+	World3D *world = *world_ref;
 
 	Layer *layer = get_layer(layer_id);
 	CRASH_COND(layer == nullptr);
@@ -380,11 +380,9 @@ void VoxelInstancer::regenerate_layer(uint16_t layer_id, bool regenerate_blocks)
 		for (int i = 0; i < positions.size(); ++i) {
 			const Vector3i pos = positions[i];
 
-			const unsigned int *iptr = layer->blocks.getptr(pos);
-			if (iptr != nullptr) {
+			if (layer->blocks.has(pos)) {
 				continue;
 			}
-
 			create_block(layer, layer_id, pos);
 		}
 	}
@@ -398,7 +396,7 @@ void VoxelInstancer::regenerate_layer(uint16_t layer_id, bool regenerate_blocks)
 		const int lod_index = block->lod_index;
 		const Lod &lod = _lods[lod_index];
 		if (lod.modified_blocks.has(block->grid_position) ||
-				lod.loaded_instances_data.find(block->grid_position) != lod.loaded_instances_data.end()) {
+				lod.loaded_instances_data.has(block->grid_position)) {
 			// Was authored, no regen on this
 			continue;
 		}
@@ -409,7 +407,7 @@ void VoxelInstancer::regenerate_layer(uint16_t layer_id, bool regenerate_blocks)
 
 		const int lod_block_size = _parent->get_block_size() << lod_index;
 		const Transform block_local_transform =
-				Transform(Basis(), (block->grid_position * lod_block_size).to_vec3());
+				Transform(Basis(), Vector3((block->grid_position * lod_block_size)));
 		const Transform block_transform = parent_transform * block_local_transform;
 
 		item->get_generator()->generate_transforms(
@@ -535,10 +533,11 @@ void VoxelInstancer::remove_layer(int layer_id) {
 	}
 
 	Vector<int> to_remove;
-	const Vector3i *block_pos_ptr = nullptr;
-	while ((block_pos_ptr = layer->blocks.next(block_pos_ptr))) {
-		int block_index = layer->blocks.get(*block_pos_ptr);
+	Map<Vector3i, unsigned int>::Element *block_pos_ptr = layer->blocks.front();
+	while (block_pos_ptr) {
+		int block_index = block_pos_ptr->get();
 		to_remove.push_back(block_index);
+		block_pos_ptr = block_pos_ptr->next();
 	}
 
 	for (int i = 0; i < to_remove.size(); ++i) {
@@ -571,18 +570,17 @@ void VoxelInstancer::remove_block(unsigned int block_index) {
 
 	if (block != moved_block) {
 		Layer *layer = get_layer(moved_block->layer_id);
-		unsigned int *iptr = layer->blocks.getptr(moved_block->grid_position);
-		CRASH_COND(iptr == nullptr);
-		*iptr = block_index;
+		CRASH_COND(!layer->blocks.has(moved_block->grid_position));
+		layer->blocks[moved_block->grid_position] = block_index;
 	}
 }
 
 void VoxelInstancer::on_block_data_loaded(Vector3i grid_position, unsigned int lod_index,
-		std::unique_ptr<VoxelInstanceBlockData> instances) {
+		Ref<VoxelInstanceBlockData> instances) {
 
 	ERR_FAIL_COND(lod_index >= _lods.size());
 	Lod &lod = _lods[lod_index];
-	lod.loaded_instances_data.insert(std::make_pair(grid_position, std::move(instances)));
+	lod.loaded_instances_data.insert(grid_position, instances);
 }
 
 void VoxelInstancer::on_block_enter(Vector3i grid_position, unsigned int lod_index, Array surface_arrays) {
@@ -592,11 +590,10 @@ void VoxelInstancer::on_block_enter(Vector3i grid_position, unsigned int lod_ind
 
 	Lod &lod = _lods[lod_index];
 
-	auto it = lod.loaded_instances_data.find(grid_position);
-	const VoxelInstanceBlockData *instances_data = nullptr;
+	Ref<VoxelInstanceBlockData> instances_data;
 
-	if (it != lod.loaded_instances_data.end()) {
-		instances_data = it->second.get();
+	if (lod.loaded_instances_data.has(grid_position)) {
+		instances_data = lod.loaded_instances_data[grid_position];
 		ERR_FAIL_COND(instances_data == nullptr);
 
 		// We could do this:
@@ -629,10 +626,8 @@ void VoxelInstancer::on_block_exit(Vector3i grid_position, unsigned int lod_inde
 
 		Layer *layer = get_layer(layer_id);
 		CRASH_COND(layer == nullptr);
-
-		const unsigned int *block_index_ptr = layer->blocks.getptr(grid_position);
-		if (block_index_ptr != nullptr) {
-			remove_block(*block_index_ptr);
+		if (!layer->blocks.has(grid_position)) {
+			remove_block(layer->blocks[grid_position]);
 		}
 	}
 }
@@ -640,9 +635,9 @@ void VoxelInstancer::on_block_exit(Vector3i grid_position, unsigned int lod_inde
 void VoxelInstancer::save_all_modified_blocks() {
 	for (unsigned int lod_index = 0; lod_index < _lods.size(); ++lod_index) {
 		Lod &lod = _lods[lod_index];
-		const Vector3i *key = nullptr;
-		while ((key = lod.modified_blocks.next(key))) {
-			save_block(*key, lod_index);
+		Map<Vector3i, bool>::Element *key = lod.modified_blocks.front();
+		while ((key = key->next())) {
+			save_block(key->key(), lod_index);
 		}
 		lod.modified_blocks.clear();
 	}
@@ -659,13 +654,13 @@ int VoxelInstancer::create_block(Layer *layer, uint16_t layer_id, Vector3i grid_
 #ifdef DEBUG_ENABLED
 	CRASH_COND(layer->blocks.has(grid_position));
 #endif
-	layer->blocks.set(grid_position, block_index);
+	layer->blocks[grid_position] = block_index;
 	return block_index;
 }
 
 void VoxelInstancer::update_block_from_transforms(int block_index, ArraySlice<const Transform> transforms,
 		Vector3i grid_position, Layer *layer, const VoxelInstanceLibraryItem *item, uint16_t layer_id,
-		World *world, const Transform &block_transform) {
+		World3D *world, const Transform &block_transform) {
 
 	VOXEL_PROFILE_SCOPE();
 
@@ -694,14 +689,14 @@ void VoxelInstancer::update_block_from_transforms(int block_index, ArraySlice<co
 		if (multimesh.is_null()) {
 			multimesh.instance();
 			multimesh->set_transform_format(MultiMesh::TRANSFORM_3D);
-			multimesh->set_color_format(MultiMesh::COLOR_NONE);
-			multimesh->set_custom_data_format(MultiMesh::CUSTOM_DATA_NONE);
+			multimesh->set_use_custom_data(true);
 		} else {
 			multimesh->set_visible_instance_count(-1);
 		}
-		PoolRealArray bulk_array = DirectMultiMeshInstance::make_transform_3d_bulk_array(transforms);
+		Vector<float> bulk_array = DirectMultiMeshInstance::make_transform_3d_bulk_array(transforms);
 		multimesh->set_instance_count(transforms.size());
-		multimesh->set_as_bulk_array(bulk_array);
+		// TODO 2021-04-03 Make multimesh work again iFire
+		// multimesh->set_as_bulk_array(bulk_array);
 
 		if (item->get_mesh_lod_count() > 0) {
 			multimesh->set_mesh(item->get_mesh(item->get_mesh_lod_count() - 1));
@@ -738,7 +733,7 @@ void VoxelInstancer::update_block_from_transforms(int block_index, ArraySlice<co
 
 				for (int i = 0; i < collision_shapes.size(); ++i) {
 					const VoxelInstanceLibraryItem::CollisionShapeInfo &shape_info = collision_shapes[i];
-					CollisionShape *cs = memnew(CollisionShape);
+					CollisionShape3D *cs = memnew(CollisionShape3D);
 					cs->set_shape(shape_info.shape);
 					cs->set_transform(shape_info.transform);
 					body->add_child(cs);
@@ -761,9 +756,10 @@ void VoxelInstancer::update_block_from_transforms(int block_index, ArraySlice<co
 	}
 }
 
-static bool contains_layer_id(const VoxelInstanceBlockData &instances_data, int id) {
-	for (auto it = instances_data.layers.begin(); it != instances_data.layers.end(); ++it) {
-		const VoxelInstanceBlockData::LayerData &layer = *it;
+static bool contains_layer_id(const Ref<VoxelInstanceBlockData> instances_data, int id) {
+	// TODO Remove auto
+	for (auto it = instances_data->layers.begin(); it != instances_data->layers.end(); ++it) {
+		const VoxelInstanceBlockData::LayerData layer = *it;
 		if (layer.id == id) {
 			return true;
 		}
@@ -771,7 +767,7 @@ static bool contains_layer_id(const VoxelInstanceBlockData &instances_data, int 
 	return false;
 }
 
-void VoxelInstancer::create_blocks(const VoxelInstanceBlockData *instances_data_ptr, Vector3i grid_position,
+void VoxelInstancer::create_blocks(const Ref<VoxelInstanceBlockData> instances_data_ptr, Vector3i grid_position,
 		int lod_index, Array surface_arrays) {
 
 	VOXEL_PROFILE_SCOPE();
@@ -779,20 +775,21 @@ void VoxelInstancer::create_blocks(const VoxelInstanceBlockData *instances_data_
 
 	Lod &lod = _lods[lod_index];
 	const Transform parent_transform = get_global_transform();
-	Ref<World> world_ref = get_world();
+	Ref<World3D> world_ref = get_world_3d();
 	ERR_FAIL_COND(world_ref.is_null());
-	World *world = *world_ref;
+	World3D *world = *world_ref;
 
 	const int lod_block_size = _parent->get_block_size() << lod_index;
-	const Transform block_local_transform = Transform(Basis(), (grid_position * lod_block_size).to_vec3());
+	const Transform block_local_transform = Transform(Basis(), Vector3((grid_position * lod_block_size)));
 	const Transform block_transform = parent_transform * block_local_transform;
 
 	// Load from data if any
-	if (instances_data_ptr != nullptr) {
+	if (instances_data_ptr.is_valid()) {
 		VOXEL_PROFILE_SCOPE();
-		const VoxelInstanceBlockData &instances_data = *instances_data_ptr;
+		ERR_FAIL_NULL(instances_data_ptr);
+		const Ref<VoxelInstanceBlockData> instances_data = instances_data_ptr;
 
-		for (auto layer_it = instances_data.layers.begin(); layer_it != instances_data.layers.end(); ++layer_it) {
+		for (auto layer_it = instances_data->layers.begin(); layer_it != instances_data->layers.end(); ++layer_it) {
 			const VoxelInstanceBlockData::LayerData &layer_data = *layer_it;
 
 			const VoxelInstanceLibraryItem *item = _library->get_item(layer_data.id);
@@ -813,8 +810,7 @@ void VoxelInstancer::create_blocks(const VoxelInstanceBlockData *instances_data_
 				continue;
 			}
 
-			const unsigned int *block_index_ptr = layer->blocks.getptr(grid_position);
-			if (block_index_ptr != nullptr) {
+			if (layer->blocks.has(grid_position)) {
 				// The block was already made?
 				continue;
 			}
@@ -838,12 +834,12 @@ void VoxelInstancer::create_blocks(const VoxelInstanceBlockData *instances_data_
 			return;
 		}
 
-		PoolVector3Array vertices = surface_arrays[ArrayMesh::ARRAY_VERTEX];
+		Vector<Vector3> vertices = surface_arrays[ArrayMesh::ARRAY_VERTEX];
 		if (vertices.size() == 0) {
 			return;
 		}
 
-		PoolVector3Array normals = surface_arrays[ArrayMesh::ARRAY_NORMAL];
+		Vector<Vector3> normals = surface_arrays[ArrayMesh::ARRAY_NORMAL];
 		ERR_FAIL_COND(normals.size() == 0);
 
 		for (auto it = lod.layers.begin(); it != lod.layers.end(); ++it) {
@@ -858,14 +854,13 @@ void VoxelInstancer::create_blocks(const VoxelInstanceBlockData *instances_data_
 			Layer *layer = get_layer(layer_id);
 			CRASH_COND(layer == nullptr);
 
-			const unsigned int *block_index_ptr = layer->blocks.getptr(grid_position);
-			if (block_index_ptr != nullptr) {
+			if (layer->blocks.has(grid_position)) {
 				// The block was already made?
 				continue;
 			}
 
-			if (item->is_persistent() && instances_data_ptr != nullptr &&
-					contains_layer_id(*instances_data_ptr, layer_id)) {
+			if (item->is_persistent() && instances_data_ptr.is_valid() &&
+					contains_layer_id(instances_data_ptr, layer_id)) {
 				// Don't generate, it received modified data
 				continue;
 			}
@@ -901,11 +896,12 @@ void VoxelInstancer::save_block(Vector3i grid_pos, int lod_index) const {
 	ERR_FAIL_COND(_library.is_null());
 
 	PRINT_VERBOSE(String("Requesting save of instance block {0} lod {1}")
-						  .format(varray(grid_pos.to_vec3(), lod_index)));
+						  .format(varray(Vector3(grid_pos), lod_index)));
 
 	const Lod &lod = _lods[lod_index];
 
-	std::unique_ptr<VoxelInstanceBlockData> data = std::make_unique<VoxelInstanceBlockData>();
+	Ref<VoxelInstanceBlockData> data;
+	data.instance();
 	const int block_size = _parent->get_block_size() << lod_index;
 	data->position_range = block_size;
 
@@ -923,10 +919,8 @@ void VoxelInstancer::save_block(Vector3i grid_pos, int lod_index) const {
 
 		ERR_FAIL_COND(layer_id < 0);
 
-		const unsigned int *block_index_ptr = layer->blocks.getptr(grid_pos);
-
-		if (block_index_ptr != nullptr) {
-			const unsigned int block_index = *block_index_ptr;
+		if (layer->blocks.has(grid_pos)) {
+			const unsigned int block_index = layer->blocks[grid_pos];
 
 #ifdef DEBUG_ENABLED
 			CRASH_COND(block_index >= _blocks.size());
@@ -995,13 +989,12 @@ void VoxelInstancer::on_area_edited(Rect3i p_voxel_box) {
 
 			blocks_box.for_each_cell([layer, &blocks, voxel_tool, p_voxel_box, parent_transform, block_size_po2, &lod](
 											 Vector3i block_pos) {
-				const unsigned int *iptr = layer->blocks.getptr(block_pos);
-				if (iptr == nullptr) {
+				if (!layer->blocks.has(block_pos)) {
 					// No instancing block here
 					return;
 				}
 
-				Block *block = blocks[*iptr];
+				Block *block = blocks[layer->blocks[block_pos]];
 				if (!block->multimesh_instance.is_valid()) {
 					// Empty block
 					return;
@@ -1014,10 +1007,10 @@ void VoxelInstancer::on_area_edited(Rect3i p_voxel_box) {
 				int instance_count = initial_instance_count;
 
 				const Transform block_global_transform = Transform(parent_transform.basis,
-						parent_transform.xform((block_pos << block_size_po2).to_vec3()));
+						parent_transform.xform(Vector3((block_pos << block_size_po2))));
 
 				// Let's check all instances one by one
-				// Note: the fact we have to query VisualServer in and out is pretty bad though.
+				// Note: the fact we have to query RenderingServer in and out is pretty bad though.
 				// - We probably have to sync with its thread in MT mode
 				// - A hashmap RID lookup is performed to check `RID_Owner::id_map`
 				for (int instance_index = 0; instance_index < instance_count; ++instance_index) {
@@ -1063,14 +1056,14 @@ void VoxelInstancer::on_area_edited(Rect3i p_voxel_box) {
 					// MeshInstance *mi = memnew(MeshInstance);
 					// mi->set_mesh(cm);
 					// mi->set_transform(get_global_transform() *
-					// 				  (Transform(Basis(), (block_pos << layer->lod_index).to_vec3()) * t));
+					// 				  (Transform(Basis(), Vector3((block_pos << layer->lod_index))) * t));
 					// add_child(mi);
 				}
 
 				// All instances have to be frozen as edited.
 				// Because even if none of them were removed or added, the ground on which they can spawn has changed,
 				// and at the moment we don't want unexpected instances to generate when loading back this area.
-				lod.modified_blocks.set(block_pos, true);
+				lod.modified_blocks[block_pos] = true;
 
 				if (instance_count < initial_instance_count) {
 					// According to the docs, set_instance_count() resets the array so we only hide them instead
@@ -1083,7 +1076,7 @@ void VoxelInstancer::on_area_edited(Rect3i p_voxel_box) {
 					// Array args;
 					// args.push_back(instance_count);
 					// args.push_back(initial_instance_count);
-					// args.push_back(block_pos.to_vec3());
+					// args.push_back(Vector3(block_pos));
 					// args.push_back(layer->lod_index);
 					// args.push_back(multimesh->get_instance_count());
 					// print_line(
@@ -1130,7 +1123,7 @@ void VoxelInstancer::on_body_removed(unsigned int block_index, int instance_inde
 	const Layer *layer = get_layer(block->layer_id);
 	CRASH_COND(layer == nullptr);
 	Lod &lod = _lods[layer->lod_index];
-	lod.modified_blocks.set(block->grid_position, true);
+	lod.modified_blocks[block->grid_position] = true;
 }
 
 int VoxelInstancer::debug_get_block_count() const {

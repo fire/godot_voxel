@@ -10,17 +10,10 @@ VoxelAboutWindow::VoxelAboutWindow() {
 	// Generated with the help of https://github.com/Zylann/godot_scene_code_converter
 
 	set_title(TTR("About Voxel Tools"));
-	set_resizable(true);
-	set_custom_minimum_size(Vector2(600, 300) * EDSCALE);
-	set_visible(true);
 
 	VBoxContainer *v_box_container = memnew(VBoxContainer);
-	v_box_container->set_anchor(MARGIN_RIGHT, 1);
-	v_box_container->set_anchor(MARGIN_BOTTOM, 1);
-	v_box_container->set_margin(MARGIN_LEFT, 4 * EDSCALE);
-	v_box_container->set_margin(MARGIN_TOP, 4 * EDSCALE);
-	v_box_container->set_margin(MARGIN_RIGHT, -4 * EDSCALE);
-	v_box_container->set_margin(MARGIN_BOTTOM, -4 * EDSCALE);
+	v_box_container->set_anchor(SIDE_RIGHT, 1);
+	v_box_container->set_anchor(SIDE_BOTTOM, 1);
 
 	// HB
 	HBoxContainer *h_box_container = memnew(HBoxContainer);
@@ -62,7 +55,7 @@ VoxelAboutWindow::VoxelAboutWindow() {
 	RichTextLabel *rich_text_label = memnew(RichTextLabel);
 	rich_text_label->set_use_bbcode(true);
 	rich_text_label->set_bbcode(about_text);
-	rich_text_label->connect("meta_clicked", this, "_on_about_rich_text_label_meta_clicked");
+	rich_text_label->connect("meta_clicked", callable_mp(this, &VoxelAboutWindow::_on_about_rich_text_label_meta_clicked));
 
 	tab_container->add_child(rich_text_label);
 
@@ -111,7 +104,7 @@ VoxelAboutWindow::VoxelAboutWindow() {
 
 void VoxelAboutWindow::_notification(int p_what) {
 	if (p_what == NOTIFICATION_THEME_CHANGED) {
-		_icon_texture_rect->set_texture(get_icon("VoxelTerrainLarge", "EditorIcons"));
+		_icon_texture_rect->set_texture(get_theme_icon("VoxelTerrainLarge", "EditorIcons"));
 	}
 }
 

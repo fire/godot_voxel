@@ -2,7 +2,7 @@
 #define VOXEL_TOOL_H
 
 #include "../util/math/rect3i.h"
-#include <core/reference.h>
+#include "core/object/reference.h"
 
 class VoxelBuffer;
 
@@ -95,51 +95,51 @@ private:
 	// cuz I don't know if it works by binding straight
 
 	uint64_t _b_get_voxel(Vector3 pos) {
-		return get_voxel(Vector3i::from_floored(pos));
+		return get_voxel(pos);
 	}
 	float _b_get_voxel_f(Vector3 pos) {
-		return get_voxel_f(Vector3i::from_floored(pos));
+		return get_voxel_f(pos);
 	}
 	void _b_set_voxel(Vector3 pos, uint64_t v) {
-		set_voxel(Vector3i::from_floored(pos), v);
+		set_voxel(pos, v);
 	}
 	void _b_set_voxel_f(Vector3 pos, float v) {
-		set_voxel_f(Vector3i::from_floored(pos), v);
+		set_voxel_f(pos, v);
 	}
 	Ref<VoxelRaycastResult> _b_raycast(Vector3 pos, Vector3 dir, float max_distance, uint32_t collision_mask) {
 		return raycast(pos, dir, max_distance, collision_mask);
 	}
 	void _b_do_point(Vector3 pos) {
-		do_point(Vector3i::from_floored(pos));
+		do_point(pos);
 	}
 	void _b_do_line(Vector3 begin, Vector3 end) {
-		do_line(Vector3i::from_floored(begin), Vector3i::from_floored(end));
+		do_line(begin, end);
 	}
 	void _b_do_circle(Vector3 pos, float radius, Vector3 direction) {
-		do_circle(Vector3i::from_floored(pos), radius, Vector3i::from_floored(direction));
+		do_circle(pos, radius, direction);
 	}
 	void _b_do_sphere(Vector3 pos, float radius) {
 		do_sphere(pos, radius);
 	}
 	void _b_do_box(Vector3 begin, Vector3 end) {
-		do_box(Vector3i::from_floored(begin), Vector3i(end));
+		do_box(begin, end);
 	}
 	void _b_copy(Vector3 pos, Ref<Reference> voxels, int channel_mask) {
-		copy(Vector3i::from_floored(pos), voxels, channel_mask);
+		copy(pos, voxels, channel_mask);
 	}
 	void _b_paste(Vector3 pos, Ref<Reference> voxels, int channels_mask, int mask_value) {
-		paste(Vector3i::from_floored(pos), voxels, channels_mask, mask_value);
+		paste(pos, voxels, channels_mask, mask_value);
 	}
 
 	Variant _b_get_voxel_metadata(Vector3 pos) {
-		return get_voxel_metadata(Vector3i::from_floored(pos));
+		return get_voxel_metadata(pos);
 	}
 	void _b_set_voxel_metadata(Vector3 pos, Variant meta) {
-		return set_voxel_metadata(Vector3i::from_floored(pos), meta);
+		return set_voxel_metadata(pos, meta);
 	}
 
 	bool _b_is_area_editable(AABB box) {
-		return is_area_editable(Rect3i(Vector3i::from_floored(box.position), Vector3i::from_floored(box.size)));
+		return is_area_editable(Rect3i(box.position, box.size));
 	}
 
 protected:

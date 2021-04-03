@@ -2,7 +2,7 @@
 #include "../../util/math/sdf.h"
 #include "../../util/noise/fast_noise_lite.h"
 
-#include <core/image.h>
+#include "core/io/image.h"
 #include <modules/opensimplex/open_simplex_noise.h>
 #include <scene/resources/curve.h>
 
@@ -19,7 +19,7 @@ inline Interval get_noise_range_2d(Noise_F noise_func, const Interval &x, const 
 	const float mid_y = 0.5 * (y.min + y.max);
 	const float mid_value = noise_func(mid_x, mid_y);
 
-	const float diag = Math::sqrt(squared(x.length()) + squared(y.length()));
+	const float diag = Math::sqrt(Math::squared(x.length()) + Math::squared(y.length()));
 
 	return Interval(
 			::max(mid_value - max_derivative_half_diagonal * diag, -1.f),
@@ -36,7 +36,7 @@ inline Interval get_noise_range_3d(Noise_F noise_func, const Interval &x, const 
 	const float mid_z = 0.5 * (z.min + z.max);
 	const float mid_value = noise_func(mid_x, mid_y, mid_z);
 
-	const float diag = Math::sqrt(squared(x.length()) + squared(y.length()) + squared(z.length()));
+	const float diag = Math::sqrt(Math::squared(x.length()) + Math::squared(y.length()) + Math::squared(z.length()));
 
 	return Interval(
 			::max(mid_value - max_derivative_half_diagonal * diag, -1.f),
@@ -149,9 +149,6 @@ Interval get_heightmap_range(Image &im, Rect2i rect) {
 		case Image::FORMAT_RGBF:
 		case Image::FORMAT_RGBAF: {
 			Interval r;
-
-			im.lock();
-
 			r.min = im.get_pixel(0, 0).r;
 			r.max = r.min;
 
@@ -163,9 +160,6 @@ Interval get_heightmap_range(Image &im, Rect2i rect) {
 					r.add_point(im.get_pixel(x, y).r);
 				}
 			}
-
-			im.unlock();
-
 			return r;
 		} break;
 
@@ -815,8 +809,6 @@ void test_derivatives_with_image(String fpath, double step, F3 noise_func_3d) {
 	Ref<Image> im;
 	im.instance();
 	im->create(size_x, size_z, false, Image::FORMAT_RGB8);
-	im->lock();
-
 	for (int py = 0; py < size_z; ++py) {
 		for (int px = 0; px < size_x; ++px) {
 			const double x = Math::lerp(x_min, x_max, static_cast<double>(px) / static_cast<double>(size_x));
@@ -826,9 +818,6 @@ void test_derivatives_with_image(String fpath, double step, F3 noise_func_3d) {
 			im->set_pixel(px, py, Color(g, g, g));
 		}
 	}
-
-	im->unlock();
-
 	print_line(String("Saving {0}").format(varray(fpath)));
 	im->save_png(fpath);
 }

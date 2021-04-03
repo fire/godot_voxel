@@ -184,7 +184,7 @@ VoxelGeneratorGraph::NodeTypeID VoxelGeneratorGraph::get_node_type_id(uint32_t n
 	return (NodeTypeID)node->type_id;
 }
 
-PoolIntArray VoxelGeneratorGraph::get_node_ids() const {
+PackedInt32Array VoxelGeneratorGraph::get_node_ids() const {
 	return _graph.get_node_ids();
 }
 
@@ -293,7 +293,7 @@ void VoxelGeneratorGraph::generate_block(VoxelBlockRequest &input) {
 				VOXEL_PROFILE_SCOPE_NAMED("Section");
 
 				const Vector3i rmin(sx, sy, sz);
-				const Vector3i rmax = rmin + Vector3i(section_size);
+				const Vector3i rmax = rmin + Vector3i(section_size, section_size, section_size);
 				const Vector3i gmin = origin + (rmin << input.lod);
 				const Vector3i gmax = origin + (rmax << input.lod);
 
@@ -502,7 +502,6 @@ void VoxelGeneratorGraph::bake_sphere_bumpmap(Ref<Image> im, float ref_radius, f
 					to_slice(x_coords), to_slice(y_coords), to_slice(z_coords), to_slice(sdf_values), false, false);
 
 			// Calculate final pixels
-			im->lock();
 			i = 0;
 			for (int iy = y0; iy < ymax; ++iy) {
 				for (int ix = x0; ix < xmax; ++ix) {
@@ -512,7 +511,6 @@ void VoxelGeneratorGraph::bake_sphere_bumpmap(Ref<Image> im, float ref_radius, f
 					++i;
 				}
 			}
-			im->unlock();
 		}
 	};
 
@@ -634,7 +632,6 @@ void VoxelGeneratorGraph::bake_sphere_normalmap(Ref<Image> im, float ref_radius,
 			// Compute the 3D normal from gradient, then project it?
 
 			// Calculate final pixels
-			im->lock();
 			i = 0;
 			for (int iy = y0; iy < ymax; ++iy) {
 				for (int ix = x0; ix < xmax; ++ix) {
@@ -650,7 +647,6 @@ void VoxelGeneratorGraph::bake_sphere_normalmap(Ref<Image> im, float ref_radius,
 					im->set_pixel(ix, iy, en);
 				}
 			}
-			im->unlock();
 		}
 	};
 
@@ -682,7 +678,7 @@ float VoxelGeneratorGraph::generate_single(const Vector3i &position) {
 	ERR_FAIL_COND_V(runtime == nullptr || !runtime->has_output(), 0.f);
 	Cache &cache = _cache;
 	runtime->prepare_state(cache.state, 1);
-	return runtime->generate_single(cache.state, position.to_vec3(), false);
+	return runtime->generate_single(cache.state, Vector3(position), false);
 }
 
 Interval VoxelGeneratorGraph::analyze_range(Vector3i min_pos, Vector3i max_pos,
@@ -715,9 +711,9 @@ Ref<Resource> VoxelGeneratorGraph::duplicate(bool p_subresources) const {
 
 static Dictionary get_graph_as_variant_data(const ProgramGraph &graph) {
 	Dictionary nodes_data;
-	PoolVector<int> node_ids = graph.get_node_ids();
+	Vector<int> node_ids = graph.get_node_ids();
 	{
-		PoolVector<int>::Read r = node_ids.read();
+		const int *r = node_ids.ptr();
 		for (int i = 0; i < node_ids.size(); ++i) {
 			uint32_t node_id = r[i];
 			const ProgramGraph::Node *node = graph.get_node(node_id);
@@ -882,7 +878,7 @@ float VoxelGeneratorGraph::debug_measure_microseconds_per_voxel(bool singular) {
 			for (uint32_t z = 0; z < cube_size; ++z) {
 				for (uint32_t y = 0; y < cube_size; ++y) {
 					for (uint32_t x = 0; x < cube_size; ++x) {
-						runtime->generate_single(cache.state, Vector3i(x, y, z).to_vec3(), false);
+						runtime->generate_single(cache.state, Vector3(Vector3i(x, y, z)), false);
 					}
 				}
 			}
@@ -1005,7 +1001,7 @@ float VoxelGeneratorGraph::_b_generate_single(Vector3 pos) {
 }
 
 Vector2 VoxelGeneratorGraph::_b_analyze_range(Vector3 min_pos, Vector3 max_pos) const {
-	const Interval r = analyze_range(Vector3i::from_floored(min_pos), Vector3i::from_floored(max_pos), false, false);
+	const Interval r = analyze_range(min_pos, max_pos, false, false);
 	return Vector2(r.min, r.max);
 }
 
@@ -1100,7 +1096,7 @@ void VoxelGeneratorGraph::_bind_methods() {
 
 	ADD_GROUP("Performance Tuning", "");
 
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "sdf_clip_threshold"), "set_sdf_clip_threshold", "get_sdf_clip_threshold");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "sdf_clip_threshold"), "set_sdf_clip_threshold", "get_sdf_clip_threshold");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_optimized_execution_map"),
 			"set_use_optimized_execution_map", "is_using_optimized_execution_map");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_subdivision"), "set_use_subdivision", "is_using_subdivision");

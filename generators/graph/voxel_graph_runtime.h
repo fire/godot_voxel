@@ -3,9 +3,9 @@
 
 #include "../../util/array_slice.h"
 #include "../../util/math/interval.h"
-#include "../../util/math/vector3i.h"
+#include "core/math/vector3i.h"
 #include "program_graph.h"
-#include <core/reference.h>
+#include "core/object/reference.h"
 
 class ImageRangeGrid;
 
@@ -404,13 +404,9 @@ private:
 				r.deleter(r.ptr);
 			}
 			heap_resources.clear();
-			unlock_images();
 			ref_resources.clear();
 			buffer_count = 0;
 		}
-
-		void lock_images();
-		void unlock_images();
 	};
 
 	Program _program;

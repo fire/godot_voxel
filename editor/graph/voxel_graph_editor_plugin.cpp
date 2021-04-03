@@ -11,8 +11,8 @@ VoxelGraphEditorPlugin::VoxelGraphEditorPlugin(EditorNode *p_node) {
 	//EditorInterface *ed = get_editor_interface();
 	_graph_editor = memnew(VoxelGraphEditor);
 	_graph_editor->set_custom_minimum_size(Size2(0, 300) * EDSCALE);
-	_graph_editor->connect(VoxelGraphEditor::SIGNAL_NODE_SELECTED, this, "_on_graph_editor_node_selected");
-	_graph_editor->connect(VoxelGraphEditor::SIGNAL_NOTHING_SELECTED, this, "_on_graph_editor_nothing_selected");
+	_graph_editor->connect(VoxelGraphEditor::SIGNAL_NODE_SELECTED, callable_mp(this, &VoxelGraphEditorPlugin::_on_graph_editor_node_selected));
+	_graph_editor->connect(VoxelGraphEditor::SIGNAL_NOTHING_SELECTED, callable_mp(this, &VoxelGraphEditorPlugin::_on_graph_editor_nothing_selected));
 	_bottom_panel_button = add_control_to_bottom_panel(_graph_editor, TTR("Voxel Graph"));
 	_bottom_panel_button->hide();
 }

@@ -18,7 +18,7 @@ bool VoxelToolLodTerrain::is_area_editable(const Rect3i &box) const {
 
 template <typename Volume_F>
 float get_sdf_interpolated(Volume_F &f, Vector3 pos) {
-	const Vector3i c = Vector3i::from_floored(pos);
+	const Vector3i c = pos;
 
 	const float s000 = f(Vector3i(c.x, c.y, c.z));
 	const float s100 = f(Vector3i(c.x + 1, c.y, c.z));
@@ -29,7 +29,7 @@ float get_sdf_interpolated(Volume_F &f, Vector3 pos) {
 	const float s011 = f(Vector3i(c.x, c.y + 1, c.z + 1));
 	const float s111 = f(Vector3i(c.x + 1, c.y + 1, c.z + 1));
 
-	return interpolate(s000, s100, s101, s001, s010, s110, s111, s011, fract(pos));
+	return pos.fract().interpolate(s000, s100, s101, s001, s010, s110, s111, s011);
 }
 
 // Binary search can be more accurate than linear regression because the SDF can be inaccurate in the first place.
@@ -179,7 +179,7 @@ int VoxelToolLodTerrain::get_raycast_binary_search_iterations() const {
 }
 
 void VoxelToolLodTerrain::set_raycast_binary_search_iterations(int iterations) {
-	_raycast_binary_search_iterations = clamp(iterations, 0, 16);
+	_raycast_binary_search_iterations = CLAMP(iterations, 0, 16);
 }
 
 void VoxelToolLodTerrain::_bind_methods() {

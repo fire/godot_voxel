@@ -35,7 +35,8 @@ bool VoxelRegionFormat::validate() const {
 	for (unsigned int i = 0; i < channel_depths.size(); ++i) {
 		bytes_per_block += VoxelBuffer::get_depth_bit_count(channel_depths[i]) / 8;
 	}
-	bytes_per_block *= Vector3i(1 << block_size_po2).volume();
+	Vector3i block_size = Vector3i(1 << block_size_po2, 1 << block_size_po2, 1 << block_size_po2);
+	bytes_per_block *= block_size.volume();
 	const size_t sectors_per_block = (bytes_per_block - 1) / sector_size + 1;
 	ERR_FAIL_COND_V(sectors_per_block > VoxelRegionBlockInfo::MAX_SECTOR_COUNT, false);
 	const size_t max_potential_sectors = region_size.volume() * sectors_per_block;
@@ -45,7 +46,7 @@ bool VoxelRegionFormat::validate() const {
 }
 
 bool VoxelRegionFormat::verify_block(const VoxelBuffer &block) const {
-	ERR_FAIL_COND_V(block.get_size() != Vector3i(1 << block_size_po2), false);
+	ERR_FAIL_COND_V(block.get_size() != Vector3i(1 << block_size_po2, 1 << block_size_po2, 1 << block_size_po2), false);
 	for (unsigned int i = 0; i < VoxelBuffer::MAX_CHANNELS; ++i) {
 		ERR_FAIL_COND_V(block.get_channel_depth(i) != channel_depths[i], false);
 	}
@@ -333,7 +334,7 @@ Error VoxelRegionFile::load_block(
 	CRASH_COND(f->eof_reached());
 
 	ERR_FAIL_COND_V_MSG(!serializer.decompress_and_deserialize(f, block_data_size, **out_block), ERR_PARSE_ERROR,
-			String("Failed to read block {0}").format(varray(position.to_vec3())));
+			String("Failed to read block {0}").format(varray(Vector3(position))));
 
 	return OK;
 }
@@ -577,7 +578,7 @@ bool VoxelRegionFile::migrate_from_v2_to_v3(FileAccess *f, VoxelRegionFormat &fo
 
 bool VoxelRegionFile::migrate_to_latest(FileAccess *f) {
 	ERR_FAIL_COND_V(f == nullptr, false);
-	ERR_FAIL_COND_V(_file_path.empty(), false);
+	ERR_FAIL_COND_V(_file_path.is_empty(), false);
 
 	uint8_t version = _header.version;
 
@@ -613,7 +614,11 @@ unsigned int VoxelRegionFile::get_block_index_in_header(const Vector3i &rpos) co
 }
 
 Vector3i VoxelRegionFile::get_block_position_from_index(uint32_t i) const {
-	return Vector3i::from_zxy_index(i, _header.format.region_size);
+	Vector3i pos;
+	pos.y = i % _header.format.region_size.y;
+	pos.x = (i / _header.format.region_size.y) % _header.format.region_size.x;
+	pos.z = i / (_header.format.region_size.y * _header.format.region_size.x);
+	return pos;
 }
 
 uint32_t VoxelRegionFile::get_sector_count_from_bytes(uint32_t size_in_bytes) const {
@@ -654,7 +659,7 @@ void VoxelRegionFile::debug_check() {
 		const unsigned int block_begin = _blocks_begin_offset + sector_index * _header.format.sector_size;
 		if (block_begin >= file_len) {
 			print_line(String("ERROR: LUT {0} ({1}): offset {2} is larger than file size {3}")
-							   .format(varray(lut_index, position.to_vec3(), block_begin, file_len)));
+							   .format(varray(lut_index, Vector3(position), block_begin, file_len)));
 			continue;
 		}
 		f->seek(block_begin);
@@ -663,7 +668,7 @@ void VoxelRegionFile::debug_check() {
 		const size_t remaining_size = file_len - pos;
 		if (block_data_size > remaining_size) {
 			print_line(String("ERROR: LUT {0} ({1}): block size at offset {2} is larger than remaining size {3}")
-							   .format(varray(lut_index, position.to_vec3(), block_data_size, remaining_size)));
+							   .format(varray(lut_index, Vector3(position), block_data_size, remaining_size)));
 		}
 	}
 }

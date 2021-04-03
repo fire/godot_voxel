@@ -2,13 +2,13 @@
 #include "../storage/voxel_buffer.h"
 #include "../storage/voxel_memory_pool.h"
 #include "../util/macros.h"
-#include "../util/math/vector3i.h"
+#include "core/math/vector3i.h"
 #include "../util/profiling.h"
 #include "compressed_data.h"
 
 #include <core/io/marshalls.h>
 #include <core/io/stream_peer.h>
-//#include <core/map.h>
+//#include "core/templates/map.h"
 #include <core/os/file_access.h>
 #include <limits>
 

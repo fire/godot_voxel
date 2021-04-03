@@ -159,7 +159,7 @@ Vector3 VoxelBoxMover::get_motion(Vector3 pos, Vector3 motion, AABB aabb, VoxelT
 
 					for (auto it = local_boxes.begin(); it != local_boxes.end(); ++it) {
 						AABB world_box = *it;
-						world_box.position += i.to_vec3();
+						world_box.position += Vector3(i);
 						potential_boxes.push_back(world_box);
 					}
 				}

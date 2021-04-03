@@ -112,9 +112,8 @@ VoxelBlock *VoxelMap::get_block(Vector3i bpos) {
 	if (_last_accessed_block && _last_accessed_block->position == bpos) {
 		return _last_accessed_block;
 	}
-	unsigned int *iptr = _blocks_map.getptr(bpos);
-	if (iptr != nullptr) {
-		const unsigned int i = *iptr;
+	if (_blocks_map.has(bpos)) {
+		const unsigned int i = _blocks_map[bpos];
 #ifdef DEBUG_ENABLED
 		CRASH_COND(i >= _blocks.size());
 #endif
@@ -130,9 +129,8 @@ const VoxelBlock *VoxelMap::get_block(Vector3i bpos) const {
 	if (_last_accessed_block != nullptr && _last_accessed_block->position == bpos) {
 		return _last_accessed_block;
 	}
-	const unsigned int *iptr = _blocks_map.getptr(bpos);
-	if (iptr != nullptr) {
-		const unsigned int i = *iptr;
+	if (_blocks_map.has(bpos)) {
+		const unsigned int i = _blocks_map[bpos];
 #ifdef DEBUG_ENABLED
 		CRASH_COND(i >= _blocks.size());
 #endif
@@ -155,7 +153,7 @@ void VoxelMap::set_block(Vector3i bpos, VoxelBlock *block) {
 #endif
 	unsigned int i = _blocks.size();
 	_blocks.push_back(block);
-	_blocks_map.set(bpos, i);
+	_blocks_map[bpos] = i;
 }
 
 void VoxelMap::remove_block_internal(Vector3i bpos, unsigned int index) {
@@ -170,9 +168,8 @@ void VoxelMap::remove_block_internal(Vector3i bpos, unsigned int index) {
 	_blocks.pop_back();
 
 	if (index < _blocks.size()) {
-		unsigned int *moved_block_index = _blocks_map.getptr(moved_block->position);
-		CRASH_COND(moved_block_index == nullptr);
-		*moved_block_index = index;
+		CRASH_COND(!_blocks_map.has(moved_block->position));
+		_blocks_map[moved_block->position] = index;
 	}
 }
 

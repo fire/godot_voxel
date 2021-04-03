@@ -3,7 +3,7 @@
 
 #include "../constants/octree_tables.h"
 #include "../constants/voxel_constants.h"
-#include "../util/math/vector3i.h"
+#include "core/math/vector3i.h"
 
 // Octree designed to handle level of detail.
 class LodOctree {
@@ -77,7 +77,7 @@ public:
 		// Distance must be greater than a threshold,
 		// otherwise lods will decimate too fast and it will look messy
 		_lod_distance =
-				clamp(p_lod_distance, VoxelConstants::MINIMUM_LOD_DISTANCE, VoxelConstants::MAXIMUM_LOD_DISTANCE);
+				CLAMP(p_lod_distance, VoxelConstants::MINIMUM_LOD_DISTANCE, VoxelConstants::MAXIMUM_LOD_DISTANCE);
 	}
 
 	float get_lod_distance() const {
@@ -201,7 +201,7 @@ private:
 
 		const int lod_factor = get_lod_factor(lod);
 		const int chunk_size = _base_size * lod_factor;
-		const Vector3 world_center = static_cast<real_t>(chunk_size) * (node_pos.to_vec3() + Vector3(0.5, 0.5, 0.5));
+		const Vector3 world_center = static_cast<real_t>(chunk_size) * (Vector3(node_pos) + Vector3(0.5, 0.5, 0.5));
 		const float split_distance = _lod_distance * lod_factor;
 		Node *node = get_node(node_index);
 

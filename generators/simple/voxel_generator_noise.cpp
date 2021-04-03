@@ -1,6 +1,6 @@
 #include "voxel_generator_noise.h"
 #include <core/core_string_names.h>
-#include <core/engine.h>
+#include <core/config/engine.h>
 
 VoxelGeneratorNoise::VoxelGeneratorNoise() {
 #ifdef TOOLS_ENABLED
@@ -21,12 +21,12 @@ void VoxelGeneratorNoise::set_noise(Ref<OpenSimplexNoise> noise) {
 		return;
 	}
 	if (_noise.is_valid()) {
-		_noise->disconnect(CoreStringNames::get_singleton()->changed, this, "_on_noise_changed");
+		_noise->disconnect(CoreStringNames::get_singleton()->changed, callable_mp(this, &VoxelGeneratorNoise::_on_noise_changed));
 	}
 	_noise = noise;
 	Ref<OpenSimplexNoise> copy;
 	if (_noise.is_valid()) {
-		_noise->connect(CoreStringNames::get_singleton()->changed, this, "_on_noise_changed");
+		_noise->connect(CoreStringNames::get_singleton()->changed, callable_mp(this, &VoxelGeneratorNoise::_on_noise_changed));
 		// The OpenSimplexNoise resource is not thread-safe so we make a copy of it for use in threads
 		copy = _noise->duplicate();
 	}
@@ -234,6 +234,6 @@ void VoxelGeneratorNoise::_bind_methods() {
 
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "channel", PROPERTY_HINT_ENUM, VoxelBuffer::CHANNEL_ID_HINT_STRING), "set_channel", "get_channel");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "noise", PROPERTY_HINT_RESOURCE_TYPE, "OpenSimplexNoise"), "set_noise", "get_noise");
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "height_start"), "set_height_start", "get_height_start");
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "height_range"), "set_height_range", "get_height_range");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "height_start"), "set_height_start", "get_height_start");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "height_range"), "set_height_range", "get_height_range");
 }

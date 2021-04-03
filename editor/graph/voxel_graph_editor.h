@@ -2,6 +2,7 @@
 #define VOXEL_GRAPH_EDITOR_H
 
 #include "../voxel_debug.h"
+#include "scene/3d/node_3d.h"
 #include <scene/gui/control.h>
 
 class VoxelGeneratorGraph;
@@ -74,7 +75,7 @@ private:
 	Vector2 _click_position;
 	bool _nothing_selected_check_scheduled = false;
 	float _time_before_preview_update = 0.f;
-	Spatial *_voxel_node = nullptr;
+	Node3D *_voxel_node = nullptr;
 	VoxelDebug::DebugRenderer _debug_renderer;
 };
 

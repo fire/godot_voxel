@@ -43,7 +43,7 @@
 #include "util/noise/fast_noise_lite.h"
 #include "util/noise/fast_noise_lite_gradient.h"
 
-#include <core/engine.h>
+#include <core/config/engine.h>
 
 #ifdef TOOLS_ENABLED
 #include "editor/voxel_debug.h"

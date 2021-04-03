@@ -16,7 +16,7 @@ public:
 	bool handles(Object *p_object) const override;
 	void edit(Object *p_object) override;
 	void make_visible(bool visible) override;
-	bool forward_spatial_gui_input(Camera *p_camera, const Ref<InputEvent> &p_event) override;
+	bool forward_spatial_gui_input(int32_t p_index, Camera3D *p_camera, const Ref<InputEvent> &p_event) override;
 
 protected:
 	void _notification(int p_what);

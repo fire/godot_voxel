@@ -1,8 +1,8 @@
 #ifndef RECT3I_H
 #define RECT3I_H
 
-#include "vector3i.h"
-#include <core/variant.h>
+#include "core/math/vector3i.h"
+#include <core/variant/variant.h>
 
 // TODO Could be renamed to something more sensical, like Box3i
 class Rect3i {
@@ -73,7 +73,7 @@ public:
 	}
 
 	String to_string() const {
-		return String("(o:{0}, s:{1})").format(varray(pos.to_vec3(), size.to_vec3()));
+		return String("(o:{0}, s:{1})").format(varray(Vector3(pos), Vector3(size)));
 	}
 
 	bool intersects(Rect3i other) const {
@@ -200,9 +200,9 @@ public:
 
 	inline Rect3i downscaled(int step_size) const {
 		Rect3i o;
-		o.pos = pos.floordiv(step_size);
-		Vector3i max_pos = (pos + size - Vector3i(1)).floordiv(step_size);
-		o.size = max_pos - o.pos + Vector3i(1);
+		o.pos = pos / step_size;
+		Vector3i max_pos = (pos + size - Vector3i(1, 1 ,1)) / step_size;
+		o.size = max_pos - o.pos + Vector3i(1, 1, 1);
 		return o;
 	}
 

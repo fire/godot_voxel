@@ -5,11 +5,11 @@
 #include "../meshers/voxel_mesher.h"
 #include "../streams/voxel_stream.h"
 
-#include <scene/3d/spatial.h>
+#include <scene/3d/node_3d.h>
 
 // Base class for voxel volumes
-class VoxelNode : public Spatial {
-	GDCLASS(VoxelNode, Spatial)
+class VoxelNode : public Node3D {
+	GDCLASS(VoxelNode, Node3D)
 public:
 	virtual void set_mesher(Ref<VoxelMesher> mesher);
 	virtual Ref<VoxelMesher> get_mesher() const;

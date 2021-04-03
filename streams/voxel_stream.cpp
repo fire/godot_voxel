@@ -1,5 +1,5 @@
 #include "voxel_stream.h"
-#include <core/script_language.h>
+#include <core/object/script_language.h>
 
 VoxelStream::VoxelStream() {
 }
@@ -90,7 +90,8 @@ int VoxelStream::_b_get_used_channels_mask() const {
 }
 
 Vector3 VoxelStream::_b_get_block_size() const {
-	return Vector3i(1 << get_block_size_po2()).to_vec3();
+	int32_t block_size = 1 << get_block_size_po2();
+	return Vector3i(block_size, block_size, block_size);
 }
 
 void VoxelStream::_bind_methods() {

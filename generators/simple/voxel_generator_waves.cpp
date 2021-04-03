@@ -37,8 +37,8 @@ Vector2 VoxelGeneratorWaves::get_pattern_size() const {
 
 void VoxelGeneratorWaves::set_pattern_size(Vector2 size) {
 	RWLockWrite wlock(_parameters_lock);
-	size.x = max(size.x, 0.1f);
-	size.y = max(size.y, 0.1f);
+	size.x = MAX(size.x, 0.1f);
+	size.y = MAX(size.y, 0.1f);
 	_parameters.pattern_size = size;
 }
 

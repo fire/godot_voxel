@@ -15,7 +15,6 @@ public:
 		set_custom_minimum_size(Vector2(0, EDSCALE * PREVIEW_HEIGHT));
 
 		_texture_rect = memnew(TextureRect);
-		_texture_rect->set_anchors_and_margins_preset(Control::PRESET_WIDE);
 		_texture_rect->set_stretch_mode(TextureRect::STRETCH_KEEP_ASPECT_COVERED);
 		add_child(_texture_rect);
 	}
@@ -29,14 +28,14 @@ public:
 		}
 
 		if (_noise.is_valid()) {
-			_noise->disconnect(CoreStringNames::get_singleton()->changed, this, "_on_noise_changed");
+			_noise->disconnect(CoreStringNames::get_singleton()->changed, callable_mp(this, &FastNoiseLiteViewer::_on_noise_changed));
 		}
 
 		_noise = noise;
 
 		if (_noise.is_valid()) {
 			set_noise_gradient(Ref<FastNoiseLiteGradient>());
-			_noise->connect(CoreStringNames::get_singleton()->changed, this, "_on_noise_changed");
+			_noise->connect(CoreStringNames::get_singleton()->changed, callable_mp(this, &FastNoiseLiteViewer::_on_noise_changed));
 			set_process(true);
 			update_preview();
 
@@ -52,14 +51,14 @@ public:
 		}
 
 		if (_noise_gradient.is_valid()) {
-			_noise_gradient->disconnect(CoreStringNames::get_singleton()->changed, this, "_on_noise_changed");
+			_noise_gradient->disconnect(CoreStringNames::get_singleton()->changed, callable_mp(this, &FastNoiseLiteViewer::_on_noise_changed));
 		}
 
 		_noise_gradient = noise_gradient;
 
 		if (_noise_gradient.is_valid()) {
 			set_noise(Ref<FastNoiseLite>());
-			_noise_gradient->connect(CoreStringNames::get_singleton()->changed, this, "_on_noise_changed");
+			_noise_gradient->connect(CoreStringNames::get_singleton()->changed, callable_mp(this, &FastNoiseLiteViewer::_on_noise_changed));
 			set_process(true);
 			update_preview();
 
@@ -95,7 +94,7 @@ private:
 		im.instance();
 		im->create(preview_size.x, preview_size.y, false, Image::FORMAT_RGB8);
 
-		im->lock();
+		
 
 		if (_noise.is_valid()) {
 			for (int y = 0; y < preview_size.y; ++y) {
@@ -126,7 +125,7 @@ private:
 			}
 		}
 
-		im->unlock();
+		
 
 		Ref<ImageTexture> tex;
 		tex.instance();
