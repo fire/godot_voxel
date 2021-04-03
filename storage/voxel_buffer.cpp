@@ -775,48 +775,47 @@ void VoxelBuffer::set_voxel_metadata(Vector3i pos, Variant meta) {
 	}
 }
 
-// TODO Restore 2021-04-03 iFire
-// void VoxelBuffer::for_each_voxel_metadata(Ref<FuncRef> callback) const {
-// 	ERR_FAIL_COND(callback.is_null());
-// 	const Map<Vector3i, Variant>::Element *elem = _voxel_metadata.front();
+void VoxelBuffer::for_each_voxel_metadata(Callable callback) const {
+	const Map<Vector3i, Variant>::Element *elem = _voxel_metadata.front();
 
-// 	while (elem != nullptr) {
-// 		const Variant key = Vector3(elem->key());
-// 		const Variant *args[2] = { &key, &elem->value() };
-// 		Variant::CallError err;
-// 		callback->call_func(args, 2, err);
+	while (elem != nullptr) {
+		const Variant key = Vector3(elem->key());
+		const Variant *args[2] = { &key, &elem->value() };
+		Callable::CallError err;
+		Variant result;
+		callback.call(args, 2, result, err);
 
-// 		ERR_FAIL_COND_MSG(err.error != Variant::CallError::CALL_OK,
-// 				String("FuncRef call failed at {0}").format(varray(key)));
-// 		// TODO Can't provide detailed error because FuncRef doesn't give us access to the object
-// 		// ERR_FAIL_COND_MSG(err.error != Variant::CallError::CALL_OK, false,
-// 		// 		Variant::get_call_error_text(callback->get_object(), method_name, nullptr, 0, err));
+		ERR_FAIL_COND_MSG(err.error != Callable::CallError::CALL_OK,
+				String("FuncRef call failed at {0}").format(varray(key)));
+		// TODO Can't provide detailed error because FuncRef doesn't give us access to the object
+		// ERR_FAIL_COND_MSG(err.error != Variant::CallError::CALL_OK, false,
+		// 		Variant::get_call_error_text(callback->get_object(), method_name, nullptr, 0, err));
 
-// 		elem = elem->next();
-// 	}
-// }
+		elem = elem->next();
+	}
+}
 
-// void VoxelBuffer::for_each_voxel_metadata_in_area(Ref<FuncRef> callback, Rect3i box) const {
-// 	ERR_FAIL_COND(callback.is_null());
-// 	const Map<Vector3i, Variant>::Element *elem = _voxel_metadata.front();
+void VoxelBuffer::for_each_voxel_metadata_in_area(Callable callback, Rect3i box) const {
+	const Map<Vector3i, Variant>::Element *elem = _voxel_metadata.front();
 
-// 	while (elem != nullptr) {
-// 		if (box.contains(elem->key())) {
-// 			const Variant key = Vector3(elem->key());
-// 			const Variant *args[2] = { &key, &elem->value() };
-// 			Variant::CallError err;
-// 			callback->call_func(args, 2, err);
+	while (elem != nullptr) {
+		if (box.contains(elem->key())) {
+			const Variant key = Vector3(elem->key());
+			const Variant *args[2] = { &key, &elem->value() };
+		    Callable::CallError err;
+		    Variant result;
+		    callback.call(args, 2, result, err);
 
-// 			ERR_FAIL_COND_MSG(err.error != Variant::CallError::CALL_OK,
-// 					String("FuncRef call failed at {0}").format(varray(key)));
-// 			// TODO Can't provide detailed error because FuncRef doesn't give us access to the object
-// 			// ERR_FAIL_COND_MSG(err.error != Variant::CallError::CALL_OK, false,
-// 			// 		Variant::get_call_error_text(callback->get_object(), method_name, nullptr, 0, err));
+		    ERR_FAIL_COND_MSG(err.error != Callable::CallError::CALL_OK,
+			    	String("FuncRef call failed at {0}").format(varray(key)));
+			// TODO Can't provide detailed error because FuncRef doesn't give us access to the object
+			// ERR_FAIL_COND_MSG(err.error != Variant::CallError::CALL_OK, false,
+			// 		Variant::get_call_error_text(callback->get_object(), method_name, nullptr, 0, err));
 
-// 		}
-// 		elem = elem->next();
-// 	}
-// }
+		}
+		elem = elem->next();
+	}
+}
 
 void VoxelBuffer::clear_voxel_metadata() {
 	_voxel_metadata.clear();
@@ -926,10 +925,10 @@ void VoxelBuffer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_block_metadata"), &VoxelBuffer::get_block_metadata);
 	ClassDB::bind_method(D_METHOD("set_block_metadata", "meta"), &VoxelBuffer::set_block_metadata);
 	ClassDB::bind_method(D_METHOD("get_voxel_metadata", "pos"), &VoxelBuffer::_b_get_voxel_metadata);
-	// ClassDB::bind_method(D_METHOD("set_voxel_metadata", "pos", "value"), &VoxelBuffer::_b_set_voxel_metadata);
-	// ClassDB::bind_method(D_METHOD("for_each_voxel_metadata", "callback"), &VoxelBuffer::for_each_voxel_metadata);
-	// ClassDB::bind_method(D_METHOD("for_each_voxel_metadata_in_area", "callback", "min_pos", "max_pos"),
-	// 		&VoxelBuffer::_b_for_each_voxel_metadata_in_area);
+	ClassDB::bind_method(D_METHOD("set_voxel_metadata", "pos", "value"), &VoxelBuffer::_b_set_voxel_metadata);
+	ClassDB::bind_method(D_METHOD("for_each_voxel_metadata", "callback"), &VoxelBuffer::for_each_voxel_metadata);
+	ClassDB::bind_method(D_METHOD("for_each_voxel_metadata_in_area", "callback", "min_pos", "max_pos"),
+			&VoxelBuffer::_b_for_each_voxel_metadata_in_area);
 	ClassDB::bind_method(D_METHOD("clear_voxel_metadata"), &VoxelBuffer::clear_voxel_metadata);
 	ClassDB::bind_method(D_METHOD("clear_voxel_metadata_in_area", "min_pos", "max_pos"),
 			&VoxelBuffer::_b_clear_voxel_metadata_in_area);
@@ -976,13 +975,13 @@ void VoxelBuffer::_b_downscale_to(Ref<VoxelBuffer> dst, Vector3 src_min, Vector3
 	downscale_to(**dst, Vector3i(src_min), Vector3i(src_max), Vector3i(dst_min));
 }
 
-// void VoxelBuffer::_b_for_each_voxel_metadata_in_area(Ref<FuncRef> callback, Vector3 min_pos, Vector3 max_pos) {
-// 	for_each_voxel_metadata_in_area(callback, Rect3i::from_min_max(Vector3i(min_pos), Vector3i(max_pos)));
-// }
+void VoxelBuffer::_b_for_each_voxel_metadata_in_area(Callable callback, Vector3 min_pos, Vector3 max_pos) {
+	for_each_voxel_metadata_in_area(callback, Rect3i::from_min_max(Vector3i(min_pos), Vector3i(max_pos)));
+}
 
-// void VoxelBuffer::_b_clear_voxel_metadata_in_area(Vector3 min_pos, Vector3 max_pos) {
-// 	clear_voxel_metadata_in_area(Rect3i::from_min_max(Vector3i(min_pos), Vector3i(max_pos)));
-// }
+void VoxelBuffer::_b_clear_voxel_metadata_in_area(Vector3 min_pos, Vector3 max_pos) {
+	clear_voxel_metadata_in_area(Rect3i::from_min_max(Vector3i(min_pos), Vector3i(max_pos)));
+}
 
 void VoxelBuffer::_b_copy_voxel_metadata_in_area(Ref<VoxelBuffer> src_buffer, Vector3 src_min_pos, Vector3 src_max_pos,
 		Vector3 dst_pos) {

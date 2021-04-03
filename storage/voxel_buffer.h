@@ -236,8 +236,8 @@ public:
 	void set_block_metadata(Variant meta);
 	Variant get_voxel_metadata(Vector3i pos) const;
 	void set_voxel_metadata(Vector3i pos, Variant meta);
-	// void for_each_voxel_metadata(Ref<FuncRef> callback) const;
-	// void for_each_voxel_metadata_in_area(Ref<FuncRef> callback, Rect3i box) const;
+	void for_each_voxel_metadata(Callable callback) const;
+	void for_each_voxel_metadata_in_area(Callable callback, Rect3i box) const;
 	void clear_voxel_metadata();
 	void clear_voxel_metadata_in_area(Rect3i box);
 	void copy_voxel_metadata_in_area(Ref<VoxelBuffer> src_buffer, Rect3i src_box, Vector3i dst_origin);
@@ -277,8 +277,8 @@ private:
 	void _b_set_voxel_v(uint64_t value, Vector3 pos, unsigned int channel_index = 0) { set_voxel(value, pos.x, pos.y, pos.z, channel_index); }
 	void _b_downscale_to(Ref<VoxelBuffer> dst, Vector3 src_min, Vector3 src_max, Vector3 dst_min) const;
 	Variant _b_get_voxel_metadata(Vector3 pos) const { return get_voxel_metadata(Vector3i(pos)); }
-	// void _b_set_voxel_metadata(Vector3 pos, Variant meta) { set_voxel_metadata(Vector3i(pos), meta); }
-	// void _b_for_each_voxel_metadata_in_area(Ref<FuncRef> callback, Vector3 min_pos, Vector3 max_pos);
+	void _b_set_voxel_metadata(Vector3 pos, Variant meta) { set_voxel_metadata(Vector3i(pos), meta); }
+	void _b_for_each_voxel_metadata_in_area(Callable callback, Vector3 min_pos, Vector3 max_pos);
 	void _b_clear_voxel_metadata_in_area(Vector3 min_pos, Vector3 max_pos);
 	void _b_copy_voxel_metadata_in_area(Ref<VoxelBuffer> src_buffer, Vector3 src_min_pos, Vector3 src_max_pos, Vector3 dst_pos);
 
