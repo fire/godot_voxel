@@ -11,9 +11,7 @@ VoxelAboutWindow::VoxelAboutWindow() {
 
 	set_title(TTR("About Voxel Tools"));
 
-	VBoxContainer *v_box_container = memnew(VBoxContainer);
-	v_box_container->set_anchor(SIDE_RIGHT, 1);
-	v_box_container->set_anchor(SIDE_BOTTOM, 1);
+	PopupPanel *popup_panel = memnew(PopupPanel);
 
 	// HB
 	HBoxContainer *h_box_container = memnew(HBoxContainer);
@@ -88,7 +86,7 @@ VoxelAboutWindow::VoxelAboutWindow() {
 
 	h_box_container->add_child(tab_container);
 
-	v_box_container->add_child(h_box_container);
+	popup_panel->add_child(h_box_container);
 
 	HBoxContainer *h_box_container2 = memnew(HBoxContainer);
 	h_box_container2->set_alignment(BoxContainer::ALIGN_CENTER);
@@ -97,9 +95,10 @@ VoxelAboutWindow::VoxelAboutWindow() {
 	button->set_text(TTR("Ok"));
 	h_box_container2->add_child(button);
 
-	v_box_container->add_child(h_box_container2);
+	popup_panel->add_child(h_box_container2);
 
-	add_child(v_box_container);
+	add_child(popup_panel);
+	popup_panel->popup_centered();
 }
 
 void VoxelAboutWindow::_notification(int p_what) {

@@ -4,7 +4,6 @@
 #include <editor/editor_plugin.h>
 
 class MenuButton;
-class VoxelAboutWindow;
 class VoxelNode;
 class VoxelTerrainEditorTaskIndicator;
 
@@ -33,8 +32,7 @@ private:
 	enum MenuID {
 		MENU_RESTART_STREAM,
 		MENU_REMESH,
-		MENU_STREAM_FOLLOW_CAMERA,
-		MENU_ABOUT
+		MENU_STREAM_FOLLOW_CAMERA
 	};
 
 	VoxelNode *_node = nullptr;
@@ -44,7 +42,6 @@ private:
 	bool _editor_viewer_follows_camera = false;
 
 	MenuButton *_menu_button = nullptr;
-	VoxelAboutWindow *_about_window = nullptr;
 	VoxelTerrainEditorTaskIndicator *_task_indicator = nullptr;
 };
 

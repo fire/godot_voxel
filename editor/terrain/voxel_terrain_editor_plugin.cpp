@@ -2,7 +2,6 @@
 #include "../../generators/voxel_generator.h"
 #include "../../terrain/voxel_lod_terrain.h"
 #include "../../terrain/voxel_terrain.h"
-#include "../about_window.h"
 #include "../graph/voxel_graph_node_inspector_wrapper.h"
 
 #include <editor/editor_scale.h>
@@ -91,7 +90,6 @@ VoxelTerrainEditorPlugin::VoxelTerrainEditorPlugin(EditorNode *p_node) {
 		menu_button->get_popup()->set_item_checked(i, _editor_viewer_follows_camera);
 	}
 	menu_button->get_popup()->add_separator();
-	menu_button->get_popup()->add_item(TTR("About Voxel Tools..."), MENU_ABOUT);
 	menu_button->get_popup()->connect("id_pressed", callable_mp(this, &VoxelTerrainEditorPlugin::_on_menu_item_selected));
 	menu_button->hide();
 	add_control_to_container(CONTAINER_SPATIAL_EDITOR_MENU, menu_button);
@@ -100,11 +98,6 @@ VoxelTerrainEditorPlugin::VoxelTerrainEditorPlugin(EditorNode *p_node) {
 	_task_indicator = memnew(VoxelTerrainEditorTaskIndicator);
 	_task_indicator->hide();
 	add_control_to_container(EditorPlugin::CONTAINER_SPATIAL_EDITOR_BOTTOM, _task_indicator);
-
-	Node *base_control = get_editor_interface()->get_base_control();
-
-	_about_window = memnew(VoxelAboutWindow);
-	base_control->add_child(_about_window);
 }
 
 void VoxelTerrainEditorPlugin::_notification(int p_what) {
@@ -252,10 +245,6 @@ void VoxelTerrainEditorPlugin::_on_menu_item_selected(int id) {
 				VoxelServer::get_singleton()->set_viewer_position(_editor_viewer_id, _editor_camera_last_position);
 			}
 		} break;
-
-		case MENU_ABOUT:
-			_about_window->popup_centered();
-			break;
 	}
 }
 
